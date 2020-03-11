@@ -1,0 +1,17 @@
+c-order-item-tile {
+    min-width: 150px;
+}
+.slds-card 
+    {
+    background-color:#f2f2f2;
+}
+.slds-card__header{
+    background-color:#f2f2f2;
+}
+.slds-align_absolute-center{
+    font-weight:bold;
+    font-size:x-large;
+}
+h1{
+    color:#c23934;
+}

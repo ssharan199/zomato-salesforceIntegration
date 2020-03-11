@@ -1,0 +1,82 @@
+<template>
+
+    <div class="container">
+    <!--  <img class="bgimg" src={foodLogoUrl}>
+         <img class="bgimg" src={foodslide2}>
+        <img class="bgimg" src={foodslide3}>
+        <img class="bgimg" src={foodslide4}> -->
+
+    <!--  <c-background-carousel></c-background-carousel>-->
+
+<div class="container">
+   <lightning-carousel>
+    <div class="slds-carousel">
+        <lightning-carousel-image
+            src={foodLogoUrl}
+            alternative-text = "First card accessible description."
+            >
+        </lightning-carousel-image>
+        <lightning-carousel-image
+            src={foodonslide2}
+            alternative-text = "Second card accessible description."
+            >
+        </lightning-carousel-image>
+        <lightning-carousel-image
+            src={foodonslide3}
+            alternative-text = "Third card accessible description."
+            >
+        </lightning-carousel-image>
+        <lightning-carousel-image
+        src={foodonslide4}
+        alternative-text = "Third card accessible description."
+        >
+    </lightning-carousel-image>
+</div>
+    </lightning-carousel> 
+</div>
+
+        <div class="text-block">
+
+
+            <div class="slds-align_absolute-center">
+            <img class="logo" src="https://b.zmtcdn.com/images/logo/zomato_flat_bg_logo.svg" alt="Find the best restaurants, cafés, and bars in Goa">
+        </div>      
+        <lightning-layout class="slds-align_absolute-center">
+
+   
+        <lightning-layout-item size="6" padding="around-small">
+        <lightning-combobox
+        name="category"
+        label=""
+        value={Category}
+        placeholder="Select Category"
+        options={options}
+        onchange={handleChange} >
+       </lightning-combobox>
+       </lightning-layout-item>
+
+
+        <lightning-layout-item size="6" padding="around-small">
+        <lightning-input
+        type="text" 
+        placeholder="Enter City" 
+        value={inputCity} 
+        onchange={handleChange} 
+        name="city"> 
+        </lightning-input>
+        </lightning-layout-item>
+
+        
+        <lightning-button
+        class="slds-m-top_large"
+        variant="destructive" 
+        label="Search" 
+        title="Search" 
+        onclick={handleClick}>
+        </lightning-button>
+
+    </lightning-layout>
+    </div>
+</div>
+
+</template>

@@ -1,0 +1,70 @@
+<template>
+
+   <template if:true={isSuccess}>
+
+    <h1>Popular Resturants</h1> 
+
+   <br/>
+    <article class="slds-card">
+
+        <p class="title slds-align_absolute-center">
+
+        Resturants Nearby...</p>
+
+        <c-filter-restaurant></c-filter-restaurant>
+
+
+<header class="slds-card__header slds-grid">
+    <lightning-layout multiple-rows="true">
+    <template for:each={restaurantsList} for:item="rest">
+        <lightning-layout-item size="4" key={rest.restaurant.id}>
+
+        <c-order-item-tile
+            key={rest.restaurant.Id}
+            rest={rest}
+            class="slds-m-around_x-small"
+        >
+        </c-order-item-tile>
+        </lightning-layout-item>
+    </template>
+
+  </lightning-layout>
+  </header>
+  </article>
+</template>
+
+<br/>
+<h1>Browse Resturants by Category</h1>
+<br/>
+
+
+<div style="width: 900px;">
+    <div style="float: left; width: 300px;">
+        <ul>
+            <li>American</li>
+            <li>Chinese</li>
+            <li>Japense</li>
+            <li>Sea Food</li>
+            </ul>
+    </div>
+    <div style="float: left; width: 300px;">
+        <ul>   
+            <li>Burger</li> 
+            <li>Indian</li>
+            <li>Pub Dining</li>
+            <li>Thai</li>
+            </ul>
+    </div>
+    <div style="float: left; width: 300px;"><ul>
+        <li>Cafe</li>
+        <li>Italian</li>
+        <li>Resturants</li>
+        <li>Vegetarian</li>
+        </ul></div>
+    <br style="clear: left;" />
+   </div>
+
+
+    </template>
+
+

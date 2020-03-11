@@ -1,0 +1,101 @@
+<template>
+    <div class="content">
+
+       <img
+            src={rest.restaurant.thumb}
+            class="product slds-align_absolute-center"
+            alt="picture"
+        /> 
+        
+        <p class="title slds-align_absolute-center">
+            {rest.restaurant.name}
+        </p>
+        <br/>
+        <table>
+            <tr>
+              <td style="width: 100px">Cost for two:</td>
+              <td>{rest.restaurant.average_cost_for_two}</td>
+            </tr>
+            <tr>
+              <td>Rating:</td>
+              <td>{rest.restaurant.user_rating.aggregate_rating}</td>
+            </tr>
+            <tr>
+                <td>Cuisines:</td>
+                <td> {rest.restaurant.cuisines}</td>
+              </tr>
+              <tr>
+                <td>Address:</td>
+                <td>{rest.restaurant.location.address}</td>
+              </tr>
+          </table>
+       <!-- <p class="slds-align_absolute-center">
+            Cost for two: 
+            <span class="cost">
+             {rest.restaurant.average_cost_for_two}
+            </span>
+        </p>
+
+        <p class="slds-align_absolute-center">
+            Rating:
+            <span class="rating">
+            {rest.restaurant.user_rating.aggregate_rating}
+            </span>
+        </p>
+
+        <p class="slds-align_absolute-center">
+            <span class="cuisine">
+            Cuisines: {rest.restaurant.cuisines}
+            </span>
+        </p>    
+        <p class="slds-align_absolute-center">
+            <span class="cuisine">
+        Address:{rest.restaurant.location.address}
+            </span>
+        </p> -->
+
+    
+
+        <!--<div class="map">
+               <lightning-map
+           map-markers = {rest.restaurant.mapMarker}
+           zoom-level = {zoomLevel}
+           style="width:60%"
+           class="border"
+           > 
+       </lightning-map>
+        </div>  -->
+
+        
+        <div class="map-container">
+               <lightning-map
+           map-markers = {rest.restaurant.mapMarker}
+           zoom-level = {zoomLevel}
+               >
+       </lightning-map>
+        </div> 
+
+        
+
+
+        <p class="slds-align_absolute-center">
+            <lightning-button 
+            name= {rest.restaurant.menu_url}
+            variant="destructive-text"
+             label="Menu" 
+             title="Menu" 
+             onclick={handleMenu} 
+             class="menu-button">
+            </lightning-button>
+    
+            <lightning-button 
+            variant="destructive-text"
+            name= {rest.restaurant.url}
+             label="Website" 
+             title="Website" 
+             onclick={handleWebsite} 
+             class="website-button">
+            </lightning-button>
+        </p>
+    </div>
+</template>

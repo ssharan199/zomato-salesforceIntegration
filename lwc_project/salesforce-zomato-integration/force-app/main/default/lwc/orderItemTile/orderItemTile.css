@@ -1,0 +1,55 @@
+  
+.content {
+    padding: 8px 8px 12px 8px;
+    background-color:#ffffff;
+    border-radius: 0.25rem;
+    margin-left: 15px;
+    margin-right: 15px;
+}
+img{
+    height: 120px;
+    max-width: initial;
+    margin-top: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 5px;
+}
+.title {
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #9c0c0c;
+    margin-top: 10px;
+}
+.rating{
+    display: inline-block;
+    position: relative;
+    width: 1.5em;
+    background-color:#750b0b;
+    color:yellow;
+    font-weight:bolder;
+    margin-left:4px;
+}
+.cost{
+    margin-left:4px;
+}
+
+.cuisine{
+    margin-top:5px;
+    text-align:center;
+}
+.slds-align_absolute-center{
+font-weight: bold;
+}
+.menu-button{
+    margin-top: 12px;
+    margin-left:5px;
+}
+.website-button{
+    margin-top: 12px;
+    margin-left:5px;
+} 
+.map-container{
+    max-width:300px !important;
+    overflow:auto;
+    width:300px !important;
+}
