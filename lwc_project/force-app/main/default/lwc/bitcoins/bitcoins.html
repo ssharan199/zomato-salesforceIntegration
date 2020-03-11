@@ -1,0 +1,14 @@
+<template>
+            <div class="slds-m-around_medium">
+                <p class="slds-m-bottom_small">
+                    <lightning-button label="Get BTC Price" onclick={handleLoad}></lightning-button>
+                </p>
+                <template if:true={BTCPrice}>
+                    success
+                </template>
+                <template if:true={error}>
+                    error
+                </template>
+            </div>
+</template>
+
