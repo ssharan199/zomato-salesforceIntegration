@@ -1,0 +1,17 @@
+public class ZomatoCategory {
+
+	public List<Categories_Z> categories;
+
+	public class Categories {
+		public Integer id;
+		public String name;
+	}
+
+	public class Categories_Z {
+		public Categories categories;
+	}
+	
+	public static ZomatoCategory parse(String json) {
+		return (ZomatoCategory) System.JSON.deserialize(json, ZomatoCategory.class);
+	}
+}
