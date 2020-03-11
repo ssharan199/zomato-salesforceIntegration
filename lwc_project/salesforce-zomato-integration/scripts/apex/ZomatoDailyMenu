@@ -1,0 +1,31 @@
+public class ZomatoDailyMenu {
+
+	public class Daily_menu {
+		public String daily_menu_id;
+		public String start_date;
+		public String name;
+		public List<Dishes> dishes;
+	}
+
+	public List<Daily_menus> daily_menus;
+	public String status;
+
+	public class Dish {
+		public String dish_id;
+		public String name;
+		public String price;
+	}
+
+	public class Dishes {
+		public Dish dish;
+	}
+
+	public class Daily_menus {
+		public Daily_menu daily_menu;
+	}
+
+	
+	public static ZomatoDailyMenu parse(String json) {
+		return (ZomatoDailyMenu) System.JSON.deserialize(json, ZomatoDailyMenu.class);
+	}
+}
