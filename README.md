@@ -2,7 +2,7 @@
 
 ## Demo Video
 Send Message from Salesforce to Whatsapp using Lightning Web Component<br/>
-[Zomato-Salesforce-Integration Demo](https://github.com/ssharan199/zomato-salesforceIntegration)
+[Zomato-Salesforce-Integration Demo](https://www.youtube.com/watch?v=HDVm5n628hs&feature=youtu.be)
 
 If you like my project. Please subscribe to my youtube channel
 
