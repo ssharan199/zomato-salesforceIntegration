@@ -6,3 +6,6 @@ Send Message from Salesforce to Whatsapp using Lightning Web Component<br/>
 
 If you like my project. Please subscribe to my youtube channel
 
+[sfdc Amplified Blog](https://www.sfdcamplified.com/2020/03/zomato-salesforce-integration-lwc.html)
+
+
