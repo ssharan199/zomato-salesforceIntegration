@@ -86,8 +86,9 @@
     },
     {
       id: 'name', dur: 3.6, env: 'day', fov: 34,
-      from: [-500, 280, 430], to: [-395, 232, 348],
-      lookFrom: [-30, 45, 0], lookTo: [-30, 45, 0],
+      up: [0.3, 1, 0],
+      from: [-690, 500, 580], to: [-600, 445, 505],
+      lookFrom: [0, 42, 0], lookTo: [0, 42, 0],
       line: 'ICON OF THE SEAS', sub: 'Duniya ka sabse bada cruise ship'
     },
     {
@@ -95,9 +96,9 @@
       // the length of a 9:16 frame instead of across it.
       id: 'titanic', dur: 4.6, env: 'day', fov: 32, titanic: true,
       up: [1, 0, 0],
-      from: [-24, 850, -66], to: [-24, 770, -66],
-      lookFrom: [-24, 10, -66], lookTo: [-24, 10, -66],
-      line: 'Titanic ≈ 5× chhota', sub: '46,328 GT  vs  248,663 GT'
+      from: [-24, 930, -58], to: [-24, 850, -58],
+      lookFrom: [-24, 10, -58], lookTo: [-24, 10, -58],
+      line: 'Titanic se 5× bada', sub: '46,328 GT  vs  248,663 GT'
     },
     {
       id: 'decks', dur: 3.6, env: 'day', fov: 40,
@@ -139,7 +140,7 @@
       id: 'price', dur: 5.0, env: 'day', fov: 30,
       from: [-620, 360, 560], to: [-980, 520, 830],
       lookFrom: [-30, 45, 0], lookTo: [-30, 45, 0],
-      line: '200 crore dollars', sub: 'Ek ship ki keemat'
+      line: '200 crore rupees', sub: 'Ek ship ki keemat'
     }
   ];
 
