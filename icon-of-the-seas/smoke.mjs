@@ -55,9 +55,16 @@ const checks = [];
 const expect = (label, ok, detail) => { checks.push({ label, ok, detail }); };
 
 try {
-// 1 — boots and starts erecting on its own
+// 1 — she is finished when you arrive, and running the build is a choice
 let r = await readout();
-expect('starts the build on arrival', r.playing && r.progress > 0, JSON.stringify(r));
+expect('arrives already built', r.progress === 1 && !r.playing && r.done === 24, JSON.stringify(r));
+await click('#play');
+await page.waitForTimeout(500);
+const started = await page.evaluate(() => ({
+  playing: window.IconApp.state.playing, progress: window.IconApp.state.progress
+}));
+expect('build from scratch restarts at the keel', started.playing && started.progress < 0.3, JSON.stringify(started));
+await page.evaluate(() => { window.IconApp.state.playing = false; });
 await shot('01-dock');
 
 // 2 — scrub to a partly-built hull
@@ -84,7 +91,7 @@ await shot('04-exploded');
 await setRange('#explode', 0);
 
 // 5 — selection opens a dossier
-await page.click('.block-row:nth-child(23)');
+await click('.block-row:nth-child(23)');
 await page.waitForTimeout(900);
 const dossier = await page.evaluate(() => ({
   open: document.querySelector('#dossier').classList.contains('open'),

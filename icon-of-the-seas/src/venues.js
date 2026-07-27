@@ -80,7 +80,10 @@
     M.glassClear.opacity = 0.2;
     M.glassClear.userData.baseOpacity = 0.2;
     M.skin = mat(0xd9a882, { rough: 0.85 });
-    M.crowd = mat(0xffffff, { rough: 0.85 });   // tinted per instance
+    // Tinted per instance. Cloth is rough, skin slightly less so.
+    M.crowd = mat(0xffffff, { rough: 0.88 });
+    M.crowdLeg = mat(0xffffff, { rough: 0.9 });
+    M.crowdSkin = mat(0xffffff, { rough: 0.62 });
   }
 
   /* -------------------------------------------------------------- primitives */
@@ -181,9 +184,10 @@
 
   /* ------------------------------------------------------------------ crowd */
 
-  // Guests: three instanced meshes sharing one set of transforms, walking
-  // little circuits inside their own venue.
+  // Guests. Eight instanced meshes — legs, arms, hips, torso, neck, head —
+  // sharing one walk cycle, each person on their own circuit inside a venue.
   var crowd = null;
+  var _limb = new THREE.Object3D();
 
   function buildCrowd() {
     var beats = [];
@@ -198,7 +202,15 @@
       { x: [74, 118], z: [-15, 15], y: L.SURFSIDE, n: 14 },
       { x: [-140, 110], z: [-22, 22], y: L.MAIN_DECK + 0.4, n: 20 }
     ];
-    var CLOTHES = [0xe8e9ea, 0x2f4f6d, 0xc4563f, 0xf0c04a, 0x3f7a5e, 0x8a5a9b, 0xdb8fb0, 0x3a3f47];
+    // Muted resort colours rather than primaries — a crowd of saturated blocks
+    // is the thing that reads as toy-like from a distance.
+    var TOPS = [
+      0xe6e8ea, 0x46617d, 0xb75a48, 0xe0b96a, 0x4e7a63, 0x7c5f86,
+      0xc98da3, 0x3f4650, 0xd9cdb8, 0x6d8fa8
+    ];
+    var LEGWEAR = [0x35404d, 0x5b6673, 0x2c333c, 0xa8a094, 0x46505c, 0x7d8794];
+    var SKIN = [0xf0c8a4, 0xdaa87c, 0xb4794f, 0x8a5a35, 0xefd3b3, 0x6f4526];
+
     groups.forEach(function (grp) {
       for (var i = 0; i < grp.n; i++) {
         var seed = beats.length * 2.399963;
@@ -209,66 +221,106 @@
           r: 1.5 + (i % 5) * 1.4,
           phase: seed % 6.283,
           speed: 0.18 + (i % 7) * 0.035,
-          height: 0.92 + (i % 4) * 0.05,
-          colour: CLOTHES[i % CLOTHES.length]
+          // adult heights cluster near 1.7 m; a few children run smaller
+          height: (i % 9 === 0) ? 0.72 + (i % 3) * 0.04 : 0.94 + (i % 5) * 0.035,
+          top: TOPS[i % TOPS.length],
+          legs: LEGWEAR[(i + 2) % LEGWEAR.length],
+          skin: SKIN[(i + 1) % SKIN.length]
         });
       }
     });
 
     var n = beats.length;
-    var legs = new THREE.InstancedMesh(new THREE.BoxGeometry(0.44, 0.86, 0.3), M.dark, n);
-    var torso = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.21, 0.44, 4, 10), M.crowd, n);
-    var head = new THREE.InstancedMesh(new THREE.SphereGeometry(0.135, 10, 8), M.skin, n);
-    [legs, torso, head].forEach(function (m) {
+
+    // Limbs pivot at hip and shoulder, so each geometry is shifted down to put
+    // its joint at the origin and the instance matrix just rotates it.
+    var legGeo = new THREE.CapsuleGeometry(0.085, 0.60, 3, 8);
+    legGeo.translate(0, -0.385, 0);
+    var armGeo = new THREE.CapsuleGeometry(0.05, 0.44, 3, 8);
+    armGeo.translate(0, -0.28, 0);
+    var torsoGeo = new THREE.CapsuleGeometry(0.155, 0.34, 4, 12);
+    var hipGeo = new THREE.CapsuleGeometry(0.145, 0.12, 3, 10);
+    var headGeo = new THREE.SphereGeometry(0.108, 12, 10);
+    headGeo.scale(0.92, 1.12, 0.96);          // a head is not a ball
+    var neckGeo = new THREE.CylinderGeometry(0.05, 0.06, 0.08, 8);
+
+    function inst(geo, material) {
+      var m = new THREE.InstancedMesh(geo, material, n);
       m.castShadow = true;
       m.frustumCulled = false;
       m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    });
+      return m;
+    }
+
+    var legL = inst(legGeo, M.crowdLeg), legR = inst(legGeo, M.crowdLeg);
+    var armL = inst(armGeo, M.crowdSkin), armR = inst(armGeo, M.crowdSkin);
+    var torso = inst(torsoGeo, M.crowd), hips = inst(hipGeo, M.crowdLeg);
+    var head = inst(headGeo, M.crowdSkin), neck = inst(neckGeo, M.crowdSkin);
+
     var col = new THREE.Color();
     for (var i = 0; i < n; i++) {
-      torso.setColorAt(i, col.setHex(beats[i].colour));
-      legs.setColorAt(i, col.setHex(i % 3 ? 0x2b3a4a : 0x6b6f74));
+      torso.setColorAt(i, col.setHex(beats[i].top));
+      legL.setColorAt(i, col.setHex(beats[i].legs));
+      legR.setColorAt(i, col.setHex(beats[i].legs));
+      hips.setColorAt(i, col.setHex(beats[i].legs));
+      head.setColorAt(i, col.setHex(beats[i].skin));
+      neck.setColorAt(i, col.setHex(beats[i].skin));
+      armL.setColorAt(i, col.setHex(beats[i].skin));
+      armR.setColorAt(i, col.setHex(beats[i].skin));
     }
-    torso.instanceColor.needsUpdate = true;
-    legs.instanceColor.needsUpdate = true;
+    var parts = [legL, legR, armL, armR, torso, hips, head, neck];
+    parts.forEach(function (m) { if (m.instanceColor) m.instanceColor.needsUpdate = true; });
 
     var group = new THREE.Group();
-    group.add(legs); group.add(torso); group.add(head);
-    crowd = { group: group, beats: beats, legs: legs, torso: torso, head: head, dummy: new THREE.Object3D() };
+    parts.forEach(function (m) { group.add(m); });
+    crowd = { group: group, beats: beats, parts: parts,
+      legL: legL, legR: legR, armL: armL, armR: armR,
+      torso: torso, hips: hips, head: head, neck: neck,
+      dummy: new THREE.Object3D() };
     return group;
   }
 
-  // Walk everyone one step around their circuit.
+  // One step of the walk cycle for everybody. Limbs swing in opposition, the
+  // body rises and falls twice per stride, and the torso leans into the turn.
+  // Place one limb of one person. Heights are in body units, scaled by the
+  // person's own height, so a child's stride matches a child's legs.
+  function limb(mesh, p, px, py, pz, rx, rz) {
+    _limb.position.set(p.x + px, p.y + py * p.h + p.bob, p.z + pz);
+    _limb.rotation.set(rx, p.facing, rz);
+    _limb.scale.setScalar(p.h);
+    _limb.updateMatrix();
+    mesh.setMatrixAt(p.i, _limb.matrix);
+  }
+
   function updateCrowd(t) {
     if (!crowd) return;
-    var d = crowd.dummy;
     for (var i = 0; i < crowd.beats.length; i++) {
       var b = crowd.beats[i];
       var a = b.phase + t * b.speed;
       var x = b.cx + Math.cos(a) * b.r;
       var z = b.cz + Math.sin(a) * b.r * 0.7;
-      var bob = Math.abs(Math.sin(a * 9)) * 0.045;
       var facing = -a - Math.PI / 2;
+      var h = b.height;
 
-      d.position.set(x, b.y + 0.43 * b.height + bob, z);
-      d.rotation.set(0, facing, 0);
-      d.scale.setScalar(b.height);
-      d.updateMatrix();
-      crowd.legs.setMatrixAt(i, d.matrix);
+      var stride = a * 9;                       // cadence
+      var swing = Math.sin(stride);
+      var bob = Math.abs(Math.cos(stride)) * 0.03 * h;
+      var lean = 0.05 + Math.abs(swing) * 0.02;
 
-      d.position.y = b.y + (1.16 + bob) * b.height;
-      d.rotation.z = Math.sin(a * 9) * 0.03;
-      d.updateMatrix();
-      crowd.torso.setMatrixAt(i, d.matrix);
-
-      d.position.y = b.y + (1.62 + bob) * b.height;
-      d.rotation.z = 0;
-      d.updateMatrix();
-      crowd.head.setMatrixAt(i, d.matrix);
+      // legs swing about the hip, arms about the shoulder, opposed
+      var hipOff = 0.085 * h, shoulder = 0.155 * h;
+      var sinF = Math.sin(facing), cosF = Math.cos(facing);
+      var P = { x: x, y: b.y, z: z, h: h, bob: bob, facing: facing, i: i };
+      limb(crowd.legL, P, cosF * hipOff, 0.86, -sinF * hipOff, swing * 0.62, 0);
+      limb(crowd.legR, P, -cosF * hipOff, 0.86, sinF * hipOff, -swing * 0.62, 0);
+      limb(crowd.hips, P, 0, 0.92, 0, 0, 0);
+      limb(crowd.torso, P, 0, 1.20, 0, lean, 0);
+      limb(crowd.armL, P, cosF * shoulder, 1.38, -sinF * shoulder, -swing * 0.5, 0.05);
+      limb(crowd.armR, P, -cosF * shoulder, 1.38, sinF * shoulder, swing * 0.5, -0.05);
+      limb(crowd.neck, P, 0, 1.50, 0, 0, 0);
+      limb(crowd.head, P, 0, 1.61, 0, Math.sin(stride * 0.5) * 0.04, 0);
     }
-    crowd.legs.instanceMatrix.needsUpdate = true;
-    crowd.torso.instanceMatrix.needsUpdate = true;
-    crowd.head.instanceMatrix.needsUpdate = true;
+    crowd.parts.forEach(function (m) { m.instanceMatrix.needsUpdate = true; });
   }
 
   /* ----------------------------------------------------------------- venues */

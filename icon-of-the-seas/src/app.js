@@ -46,7 +46,6 @@
   var fx, walker, director, recorder, crowdGroup, reel, titanic;
   var BASE_FOV = 42;
   var labelEls = [];
-  var selectionBox, selectionHelper;
   var wake, wakeData;
   var shipYaw, shipTrim;
   var clock;
@@ -456,14 +455,6 @@
       deckLightRig.push(l);
     });
 
-    selectionBox = new THREE.Box3();
-    selectionHelper = new THREE.Box3Helper(selectionBox, 0xff6b2c);
-    selectionHelper.visible = false;
-    if (selectionHelper.material) {
-      selectionHelper.material.depthTest = false;
-      selectionHelper.material.transparent = true;
-    }
-    scene.add(selectionHelper);
 
     controls = new OrbitRig(camera, canvas);
 
@@ -485,15 +476,10 @@
     buildUI();
     clock = new THREE.Clock();
 
-    // The build is the point of the page, so it runs on arrival rather than
-    // opening on an empty stretch of sea. Reduced motion gets the finished ship.
-    if (reduceMotion) {
-      setProgress(1);
-    } else {
-      setProgress(0);
-      state.playing = true;
-      syncPlay();
-    }
+    // She arrives finished. Watching her go up is something you choose.
+    setProgress(1);
+    state.playing = false;
+    syncPlay();
 
     global.addEventListener('resize', onResize);
     canvas.addEventListener('click', onPick);
@@ -624,7 +610,6 @@
     var drawer = $('#dossier');
     if (!part) {
       drawer.classList.remove('open');
-      selectionHelper.visible = false;
       if (state.isolate) { state.isolate = false; syncToggle('isolate', false); }
       applyProgress();
       return;
@@ -642,7 +627,6 @@
       table.appendChild(dt); table.appendChild(dd);
     });
     drawer.classList.add('open');
-    selectionHelper.visible = true;
     refreshSelectionBox();
     if (focus) {
       if (partProgress(part.index) <= 0) {
@@ -660,12 +644,9 @@
     return _v.copy(part.centre).applyMatrix4(part.group.matrixWorld).clone();
   }
 
-  function refreshSelectionBox() {
-    if (!state.selected || !state.selected.group.visible) { selectionHelper.visible = false; return; }
-    selectionHelper.visible = true;
-    selectionBox.setFromObject(state.selected.inner);
-    selectionBox.expandByScalar(1.5);
-  }
+  // Selection reads through the tag, the dossier and the list row. A wireframe
+  // cage around the block only got in the way of looking at it.
+  function refreshSelectionBox() {}
 
   function onPick(e) {
     if (state.sailing) return;
@@ -1071,7 +1052,8 @@
 
   function syncPlay() {
     var b = $('#play');
-    b.textContent = state.playing ? 'Pause build' : (state.progress >= 1 ? 'Replay build' : 'Run build');
+    b.textContent = state.playing ? 'Pause build'
+      : (state.progress >= 1 ? 'Build from scratch' : 'Resume build');
     b.classList.toggle('is-playing', state.playing);
   }
 

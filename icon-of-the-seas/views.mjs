@@ -21,7 +21,9 @@ const VIEWS = [
   { id: 'hideaway', pos: [-148, 62.4, 0], yaw: Math.PI / 2, pitch: -0.05 },
   { id: 'crown', pos: [-34, 66.3, 24], yaw: 0, pitch: -0.15 },
   { id: 'maindeck', pos: [40, 30.4, 21.9], yaw: -Math.PI / 2, pitch: 0 },
-  { id: 'surfside', pos: [96, 44, 0], yaw: Math.PI / 2, pitch: 0.05 }
+  { id: 'surfside', pos: [96, 44, 0], yaw: Math.PI / 2, pitch: 0.05 },
+  { id: 'crowd', pos: [-64, 76.8, -13], yaw: Math.PI * 0.92, pitch: -0.02 },
+  { id: 'crowd-promenade', pos: [-96, 32.7, 2], yaw: -Math.PI / 2, pitch: -0.03 }
 ];
 
 const browser = await chromium.launch({

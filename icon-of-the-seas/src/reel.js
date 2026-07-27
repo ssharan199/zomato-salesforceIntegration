@@ -6,7 +6,11 @@
    everything downstream shifts with it.
 
    All camera positions are in ship space, so a shot holds its framing even
-   while she is under way and rolling. */
+   while she is under way and rolling.
+
+   The whole cut runs in daylight: the blue-water aerials read the ship's shape
+   and her decks, which is what this script is actually about. Night is still a
+   toggle in the console if a scene ever wants it. */
 (function (global) {
   'use strict';
   var THREE = global.THREE;
@@ -75,13 +79,13 @@
   // line     the caption; sub is the small line under it
   var SCENES = [
     {
-      id: 'hook', dur: 3.4, env: 'night', fov: 30,
+      id: 'hook', dur: 3.4, env: 'day', fov: 30,
       from: [520, 12, 90], to: [300, 30, 55],
       lookFrom: [180, 30, 0], lookTo: [120, 45, 0],
       line: 'Ye koi sheher nahi', sub: ''
     },
     {
-      id: 'name', dur: 3.6, env: 'night', fov: 30,
+      id: 'name', dur: 3.6, env: 'day', fov: 30,
       from: [-880, 470, 760], to: [-660, 380, 600],
       lookFrom: [-30, 45, 0], lookTo: [-30, 45, 0],
       line: 'ICON OF THE SEAS', sub: 'Duniya ka sabse bada cruise ship'
@@ -96,13 +100,13 @@
       line: 'Titanic ≈ 5× chhota', sub: '46,328 GT  vs  248,663 GT'
     },
     {
-      id: 'decks', dur: 3.6, env: 'night', fov: 40,
+      id: 'decks', dur: 3.6, env: 'day', fov: 40,
       from: [-40, 8, 120], to: [-40, 96, 150],
       lookFrom: [-40, 30, 0], lookTo: [-40, 60, 0],
       line: '20 decks', sub: '20-manzil ki building, samundar pe'
     },
     {
-      id: 'people', dur: 4.0, env: 'night', fov: 58,
+      id: 'people', dur: 4.0, env: 'day', fov: 58,
       from: [-118, 34.6, 0.4], to: [30, 34.6, -0.4],
       lookFrom: [-20, 34.8, 0], lookTo: [120, 35.6, 0],
       line: '7,600 guests', sub: '+ 2,350 crew — ek chhota sheher'
@@ -126,13 +130,13 @@
       line: 'Hazaaron asli paudhe', sub: 'Central Park · khule aasman ke neeche'
     },
     {
-      id: 'food', dur: 3.6, env: 'night', fov: 60,
+      id: 'food', dur: 3.6, env: 'day', fov: 60,
       from: [40, 34.6, 4], to: [-70, 34.6, -4],
       lookFrom: [-20, 35, 0], lookTo: [-130, 35.4, 0],
       line: 'Har din alag restaurant', sub: 'Royal Promenade'
     },
     {
-      id: 'price', dur: 5.0, env: 'night', fov: 30,
+      id: 'price', dur: 5.0, env: 'day', fov: 30,
       from: [-620, 360, 560], to: [-980, 520, 830],
       lookFrom: [-30, 45, 0], lookTo: [-30, 45, 0],
       line: '$2 billion', sub: 'Ek ship ki keemat'

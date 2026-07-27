@@ -70,6 +70,8 @@ vendor/three.min.js
 build.mjs         inlines the above into dist/
 smoke.mjs         headless checks — drives everything, fails on any runtime error
 views.mjs         review tool — first-person and exterior frames from each venue
+reelshots.mjs     contact sheet — one frame from the middle of every reel cut
+verify.mjs        checks load state, daylight, selection chrome, crowd rig
 ```
 
 ## Walking aboard
@@ -111,7 +113,7 @@ illumination rather than a reflection.
 
 ```
 npm install        # playwright, for the headless run only
-npm test           # 14 checks: build, dossiers, cutaway, night, sea trial, walking, filming
+npm test           # 15 checks: build, dossiers, cutaway, night, sea trial, walking, filming
 npm run test:shots # same, plus screenshots into dist/
 ```
 
@@ -125,6 +127,12 @@ deck heights and neighbourhood positions are set to match photographs and the
 published general arrangement, but this is a game, not a lines plan. Where a
 published figure is uncertain — pod output, tank capacity, boat count — the
 dossier describes the system instead of inventing a number.
+
+## On load
+
+She arrives finished, in daylight. **Build from scratch** in the console (or
+<kbd>Space</kbd>) resets to bare keel and runs the 24-block erection; the
+progress slider scrubs it by hand. Night is a toggle, not the default.
 
 ## The reel
 
