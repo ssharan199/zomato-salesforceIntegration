@@ -1,0 +1,14 @@
+{
+  "name": "icon-of-the-seas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Interactive 3D design and assembly game for Icon of the Seas, built with three.js",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node build.mjs && node smoke.mjs",
+    "test:shots": "node build.mjs && node smoke.mjs --shots"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.0"
+  }
+}

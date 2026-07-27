@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Icon of the Seas — Assembly Console</title>
+<meta name="description" content="Build the world's largest cruise ship block by block, then take her to sea. Interactive 3D." />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div id="labels" class="labels" aria-hidden="true"></div>
+
+<div id="veil" class="veil">
+  <div class="veil__inner">
+    <span class="veil__eyebrow">Meyer Turku · Building dock</span>
+    <strong class="veil__title">Icon of the Seas</strong>
+    <p id="veil-msg" class="veil__msg">Flooding the dock…</p>
+  </div>
+</div>
+
+<header class="readout" id="readout">
+  <span class="readout__verb" id="stage-verb">Building dock</span>
+  <b class="readout__name" id="stage-name">Keel not yet laid</b>
+  <span class="readout__no" id="stage-no">00 / 24</span>
+  <span class="readout__pct" id="pct">0%</span>
+</header>
+
+<button class="panel-toggle" id="panel-toggle" type="button">Console</button>
+
+<aside class="console" id="console">
+  <div class="console__head">
+    <span class="ident__yard">Icon class · lead ship · Meyer Turku</span>
+    <h1 class="ident__name">Icon <em>of the Seas</em></h1>
+    <div class="ladder" id="ladder" role="group" aria-label="Block erection sequence"></div>
+  </div>
+
+  <div class="console__scroll">
+    <section class="sect">
+      <h2 class="sect__title"><span class="sect__num">I</span> Build sequence</h2>
+      <label class="field" for="progress">
+        <span class="field__label">Erection progress</span>
+        <input id="progress" class="slider" type="range" min="0" max="1000" value="0" step="1" />
+      </label>
+      <div class="btn-row">
+        <button class="btn btn--primary" id="play" type="button">Run build</button>
+        <button class="btn" id="reset" type="button">Reset</button>
+      </div>
+      <label class="field" for="speed">
+        <span class="field__label">Build rate <em id="speed-val">×1.00</em></span>
+        <input id="speed" class="slider" type="range" min="25" max="300" value="100" step="5" />
+      </label>
+      <button class="switch" data-toggle="follow" role="switch" aria-checked="true" type="button">
+        <span>Camera follows the crane</span><i></i>
+      </button>
+    </section>
+
+    <section class="sect">
+      <h2 class="sect__title"><span class="sect__num">II</span> Exploded view</h2>
+      <label class="field" for="explode">
+        <span class="field__label">Block separation</span>
+        <input id="explode" class="slider" type="range" min="0" max="100" value="0" step="1" />
+      </label>
+      <div class="btn-row">
+        <button class="btn" id="explode-all" type="button">Explode all</button>
+        <button class="btn" id="collapse" type="button">Collapse</button>
+      </div>
+      <button class="switch" data-toggle="labels" role="switch" aria-checked="true" type="button">
+        <span>Block tags</span><i></i>
+      </button>
+      <button class="switch" data-toggle="isolate" role="switch" aria-checked="false" type="button">
+        <span>Isolate selected block</span><i></i>
+      </button>
+    </section>
+
+    <section class="sect">
+      <h2 class="sect__title"><span class="sect__num">III</span> Ship &amp; sea</h2>
+      <button class="switch" data-toggle="cutaway" role="switch" aria-checked="false" type="button">
+        <span>Cutaway — open the starboard shell</span><i></i>
+      </button>
+      <button class="switch" data-toggle="deckLights" role="switch" aria-checked="false" type="button">
+        <span>Deck &amp; cabin lights</span><i></i>
+      </button>
+      <button class="switch" data-toggle="night" role="switch" aria-checked="false" type="button">
+        <span>Night</span><i></i>
+      </button>
+      <label class="field" for="sea">
+        <span class="field__label">Sea state <em id="sea-val">Slight</em></span>
+        <input id="sea" class="slider" type="range" min="0" max="100" value="30" step="1" />
+      </label>
+    </section>
+
+    <section class="sect">
+      <h2 class="sect__title"><span class="sect__num">IV</span> Sea trial</h2>
+      <p class="sect__note">Takes her out of the dock under her own power. <kbd>W</kbd><kbd>S</kbd> throttle, <kbd>A</kbd><kbd>D</kbd> helm.</p>
+      <button class="btn btn--wide" id="sail-btn" type="button">Begin sea trial</button>
+    </section>
+
+    <section class="sect">
+      <h2 class="sect__title"><span class="sect__num">V</span> Block dossiers <em class="sect__count">24</em></h2>
+      <div class="block-list" id="block-list"></div>
+    </section>
+
+    <p class="colophon">Built with three.js. Dimensions and features follow the delivered ship; values marked ≈ are approximate.</p>
+  </div>
+</aside>
+
+<section class="dossier" id="dossier" aria-live="polite">
+  <button class="dossier__close" id="dossier-close" type="button" aria-label="Close dossier">✕</button>
+  <span class="dossier__no" id="dossier-no">Block 01</span>
+  <span class="dossier__zone" id="dossier-zone">Hull structure</span>
+  <h3 class="dossier__name" id="dossier-name">Keel &amp; Double Bottom</h3>
+  <dl class="dossier__specs" id="dossier-specs"></dl>
+  <p class="dossier__note" id="dossier-note"></p>
+  <button class="btn btn--wide" id="dossier-focus" type="button">Frame this block</button>
+</section>
+
+<footer class="specstrip">
+  <div><span>Length overall</span><b>364.75 m</b></div>
+  <div><span>Beam</span><b>48.5 m</b></div>
+  <div><span>Draft</span><b>9.3 m</b></div>
+  <div><span>Gross tonnage</span><b>248,663</b></div>
+  <div><span>Decks</span><b>20</b></div>
+  <div><span>Guests</span><b>5,610</b></div>
+  <div><span>Service speed</span><b>22 kn</b></div>
+</footer>
+
+<div class="helm" id="helm">
+  <div class="helm__data">
+    <div><span>Speed</span><b id="kn">0.0</b><i>kn</i></div>
+    <div><span>Heading</span><b id="hdg">000°</b></div>
+    <div><span>Pods</span><b id="pod">0°</b></div>
+  </div>
+  <button class="btn helm__exit" id="helm-exit" type="button">Return to the dock</button>
+  <div class="helm__pad">
+    <button class="helm__key" id="helm-port" type="button" aria-label="Helm to port">◀</button>
+    <button class="helm__key" id="helm-ahead" type="button" aria-label="Ahead">▲</button>
+    <button class="helm__key" id="helm-astern" type="button" aria-label="Astern">▼</button>
+    <button class="helm__key" id="helm-stbd" type="button" aria-label="Helm to starboard">▶</button>
+  </div>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="src/ship.js"></script>
+<script src="src/app.js"></script>
+</body>
+</html>
