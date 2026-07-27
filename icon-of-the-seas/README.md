@@ -156,3 +156,28 @@ the 9:16 box that actually gets exported.
 
 `node reelshots.mjs [n...]` renders one frame from the middle of each cut as a
 contact sheet.
+
+## Rendering the reel to a file
+
+The browser's own recorder is no use in a container with no GPU: the page draws
+at a couple of frames a second, so a real-time capture would be a slideshow.
+`render.mjs` instead addresses every frame by time — `IconApp.renderFrameAt(t)`
+draws a frame that depends on nothing but `t`, including the caption animation,
+the sea, the crowd and the ship's trim — saves each one, and assembles them
+afterwards. The render takes as long as it takes; the film still runs at 30 fps.
+
+```
+node render.mjs                       # whole cut, 720x1280 upscaled to 1080x1920
+node render.mjs --frames 24           # a short test
+node render.mjs --shards 3 --shard 0 --no-mux   # one worker of a split render
+node render.mjs --mux-only            # assemble frames already on disk
+```
+
+Sharding across browsers turned out not to help here — the software rasteriser
+already uses every core, so three workers deliver the same 0.38 fps as one.
+
+Timing comes from the voice track in `audio/`. Each line is given time in
+proportion to its syllable count, then every boundary is snapped to the nearest
+pause found by `silencedetect` when one falls within 0.75 s. The scene
+durations in `src/reel.js` sum to the recording's length exactly, so picture and
+sound end together.

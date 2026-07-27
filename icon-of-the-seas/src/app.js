@@ -34,7 +34,8 @@
     hideUI: false,
     reel: false,          // 9:16 framing for a vertical cut
     fx: true,
-    bloom: 0.42
+    bloom: 0.42,
+    offline: false      // true while an offline render drives frames by time
   };
 
   var renderer, scene, camera, ship, controls, sun, hemi, ocean, oceanGeo, oceanBase;
@@ -1247,6 +1248,8 @@
     requestAnimationFrame(tick);
     var dt = Math.min(clock.getDelta(), 0.05);
     var t = clock.elapsedTime;
+    // An offline render owns the clock; the live loop must not also advance it.
+    if (state.offline) return;
 
     if (state.playing) {
       state.progress += dt * 0.055 * state.speed;
@@ -1384,6 +1387,60 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 
+  /* -------------------------------------------------------- offline render */
+
+  // Draw the frame at absolute time `t` on the reel timeline. Nothing here
+  // reads a wall clock, so the same t always produces the same frame — which
+  // is what lets a 1 fps software rasteriser render a 30 fps film.
+  function renderFrameAt(t) {
+    var seek = reel.seek(t);
+    reel.update(0, camera, shipTrim.matrixWorld);
+
+    // captions: CSS animations run on wall-clock, so drive them from t instead
+    var scene = seek.scene;
+    var cap = $('#reel-caption');
+    var into = seek.local, left = scene.dur - seek.local;
+    var appear = Math.min(1, into / 0.42);
+    var leave = Math.min(1, Math.max(0, (0.45 - left) / 0.45));
+    var ease = function (v) { return v * v * (3 - 2 * v); };
+    var op = ease(appear) * (1 - ease(leave));
+    var lift = (1 - ease(appear)) * 18 - ease(leave) * 14;
+    cap.style.animation = 'none';
+    cap.style.opacity = op.toFixed(3);
+    cap.style.transform = 'translateY(' + lift.toFixed(2) + 'px)';
+    $('#reel-progress').style.setProperty('--k', (seek.local / scene.dur * 100).toFixed(1) + '%');
+
+    // sea, machinery and guests all read the same clock
+    if (seaUniforms) seaUniforms.uTime.value = t;
+    for (var wi = 0; wi < waterMats.length; wi++) waterMats[wi].uniforms.uTime.value = t;
+    ocean.position.x = shipYaw.position.x;
+    ocean.position.z = shipYaw.position.z;
+    updateOcean(t);
+    crowdGroup.visible = true;
+    global.IconVenues.updateCrowd(t);
+
+    var hMid = waveAt(0, 0, t, null);
+    var hBow = waveAt(150, 0, t, null), hStern = waveAt(-150, 0, t, null);
+    var hPort = waveAt(0, -24, t, null), hStbd = waveAt(0, 24, t, null);
+    shipTrim.position.y = hMid - global.IconShip.dims.DRAFT;
+    shipTrim.rotation.z = clamp((hPort - hStbd) / 48, -0.05, 0.05);
+    shipTrim.rotation.x = clamp((hStern - hBow) / 300, -0.03, 0.03);
+    shipYaw.updateMatrixWorld(true);
+
+    ship.spinners.forEach(function (o) {
+      var axis = o.userData.axis || 'x';
+      var amt = t * o.userData.spin * 0.35;
+      if (axis === 'y') o.rotation.y = amt; else if (axis === 'z') o.rotation.z = amt; else o.rotation.x = amt;
+    });
+
+    // the camera move is set by the reel; re-place it after the trim changed
+    reel.update(0, camera, shipTrim.matrixWorld);
+    fx.render(scene3d(), camera, t);
+    return { scene: scene.id, line: scene.line };
+  }
+
+  function scene3d() { return scene; }
+
   // Handles for the headless checks — and for anyone poking at it in a console.
   global.IconApp = {
     state: state,
@@ -1415,6 +1472,15 @@
     stepFilm: function (dt) { director.update(dt, camera, shipTrim.matrixWorld); },
     stepReel: function (dt) { reel.update(dt, camera, shipTrim.matrixWorld); },
     startReel: startReel,
-    get reel() { return reel; }
+    get reel() { return reel; },
+    // offline render control
+    beginOffline: function () {
+      state.offline = true;
+      setMode('reel');
+      reel.stop();
+    },
+    endOffline: function () { state.offline = false; },
+    renderFrameAt: renderFrameAt,
+    reelDuration: function () { return reel.total(); }
   };
 })(window);
