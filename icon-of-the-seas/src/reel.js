@@ -3,10 +3,11 @@
    A cut sequence for a 9:16 vertical short, cut to a Hinglish voice-over.
    Each scene owns its camera move, its lighting, and its caption.
 
-   The durations are measured against the delivered recording (36.24 s): each
-   line gets time in proportion to its syllable count, and every boundary is
-   then snapped to the nearest pause in the audio where one falls within
-   0.75 s. Change any `dur` and everything after it shifts with it.
+   The durations come from align.mjs, which splits the recording's speech runs
+   into one group per line — choosing the split that best matches each line's
+   syllable count, with a floor on scene length. Every cut is therefore forced
+   to land inside a real pause, never mid-word. Change any `dur` and everything
+   after it shifts with it.
 
    All camera positions are in ship space, so a shot holds its framing even
    while she is under way and rolling.
@@ -82,13 +83,13 @@
   // line     the caption; sub is the small line under it
   var SCENES = [
     {
-      id: 'hook', dur: 4.57, env: 'day', fov: 46,
+      id: 'hook', dur: 3.37, env: 'day', fov: 46,
       from: [340, 9, 76], to: [104, 36, 64],
       lookFrom: [170, 28, 4], lookTo: [-10, 52, 0],
       line: 'Ye koi sheher nahi', sub: ''
     },
     {
-      id: 'name', dur: 1.59, env: 'day', fov: 34,
+      id: 'name', dur: 2.2, env: 'day', fov: 34,
       up: [0.3, 1, 0],
       from: [-690, 500, 580], to: [-600, 445, 505],
       lookFrom: [0, 42, 0], lookTo: [0, 42, 0],
@@ -97,50 +98,50 @@
     {
       // Straight down with the camera's up along the hull, so both ships run
       // the length of a 9:16 frame instead of across it.
-      id: 'titanic', dur: 4.77, env: 'day', fov: 32, titanic: true,
+      id: 'titanic', dur: 5.95, env: 'day', fov: 32, titanic: true,
       up: [1, 0, 0],
       from: [-24, 930, -58], to: [-24, 850, -58],
       lookFrom: [-24, 10, -58], lookTo: [-24, 10, -58],
       line: 'Titanic se 5× bada', sub: '46,328 GT  vs  248,663 GT'
     },
     {
-      id: 'decks', dur: 4.42, env: 'day', fov: 40,
+      id: 'decks', dur: 4.88, env: 'day', fov: 40,
       from: [-40, 8, 120], to: [-40, 96, 150],
       lookFrom: [-40, 30, 0], lookTo: [-40, 60, 0],
       line: '20 decks', sub: '20-manzil ki building, samundar pe'
     },
     {
-      id: 'people', dur: 6.48, env: 'day', fov: 58,
+      id: 'people', dur: 4.33, env: 'day', fov: 58,
       from: [-118, 34.6, 0.4], to: [30, 34.6, -0.4],
       lookFrom: [-20, 34.8, 0], lookTo: [120, 35.6, 0],
       line: '7,600 guests', sub: '+ 2,350 crew — ek chhota sheher'
     },
     {
-      id: 'pools', dur: 2.06, env: 'day', fov: 42,
+      id: 'pools', dur: 3.97, env: 'day', fov: 42,
       from: [-108, 100, 52], to: [-20, 132, 86],
       lookFrom: [-52, 78, 0], lookTo: [-40, 76, 0],
       line: '7 swimming pools', sub: ''
     },
     {
-      id: 'waterpark', dur: 2.22, env: 'day', fov: 54,
+      id: 'waterpark', dur: 3.35, env: 'day', fov: 54,
       from: [-70, 118, 62], to: [-150, 96, 44],
       lookFrom: [-118, 88, 0], lookTo: [-130, 82, 0],
       line: 'Samundar ka sabse bada waterpark', sub: 'Category 6 · 6 slides'
     },
     {
-      id: 'park', dur: 3.3, env: 'day', fov: 46,
+      id: 'park', dur: 3.41, env: 'day', fov: 46,
       from: [-42, 48.4, 3], to: [46, 48.8, -3],
       lookFrom: [10, 48.6, 0], lookTo: [72, 54, 0],
       line: 'Hazaaron asli paudhe', sub: 'Central Park · khule aasman ke neeche'
     },
     {
-      id: 'food', dur: 2.87, env: 'day', fov: 60,
+      id: 'food', dur: 4.17, env: 'day', fov: 60,
       from: [40, 34.6, 4], to: [-70, 34.6, -4],
       lookFrom: [-20, 35, 0], lookTo: [-130, 35.4, 0],
       line: 'Har din alag restaurant', sub: 'Royal Promenade'
     },
     {
-      id: 'price', dur: 3.96, env: 'day', fov: 30,
+      id: 'price', dur: 3.94, env: 'day', fov: 30,
       from: [-620, 360, 560], to: [-980, 520, 830],
       lookFrom: [-30, 45, 0], lookTo: [-30, 45, 0],
       line: '200 crore rupees', sub: 'Ek ship ki keemat'
