@@ -494,7 +494,7 @@
   }
 
   function onResize() {
-    var w = innerWidth, h = innerHeight;
+    var w = innerWidth, h = innerHeight, fx0 = 0, fy0 = 0;
     if (state.reel) {
       // 9:16 for a vertical cut — the canvas itself is the frame that records.
       h = Math.min(innerHeight, innerWidth * 16 / 9);
@@ -502,8 +502,10 @@
       var el = renderer.domElement;
       el.style.width = w + 'px';
       el.style.height = h + 'px';
-      el.style.left = ((innerWidth - w) / 2) + 'px';
-      el.style.top = ((innerHeight - h) / 2) + 'px';
+      fx0 = (innerWidth - w) / 2;
+      fy0 = (innerHeight - h) / 2;
+      el.style.left = fx0 + 'px';
+      el.style.top = fy0 + 'px';
       el.style.right = 'auto';
       el.style.bottom = 'auto';
     } else {
@@ -512,6 +514,14 @@
       e2.style.left = '0'; e2.style.top = '0';
       e2.style.right = '0'; e2.style.bottom = '0';
     }
+    // Overlays read these: captions belong inside the frame that gets exported,
+    // and vw units would size them to the window instead.
+    var root = document.documentElement;
+    root.style.setProperty('--frame-w', w + 'px');
+    root.style.setProperty('--frame-h', h + 'px');
+    root.style.setProperty('--frame-x', fx0 + 'px');
+    root.style.setProperty('--frame-y', fy0 + 'px');
+
     camera.aspect = w / h;
     // Bias the frustum so the ship centres in the water, not behind the console.
     var rail = (state.mode === 'orbit' && !state.hideUI && !state.reel && innerWidth > 900) ? 344 : 0;

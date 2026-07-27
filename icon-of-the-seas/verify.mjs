@@ -56,13 +56,42 @@ const afterSelect = await p.evaluate(() => {
 });
 await p.screenshot({ path: join(here, 'dist/verify-selected.png') });
 
+// captions must sit inside the 9:16 frame that gets exported, not the window.
+// Measured from Node rather than inside an in-page promise, which the very slow
+// software-rendered page can have collected before it settles.
+await p.evaluate(() => {
+  window.IconApp.setToggle('reel', true);
+  window.IconApp.setToggle('hideUI', true);
+  window.IconApp.startReel(false);
+});
+await p.waitForTimeout(2000);
+const caption = await p.evaluate(() => {
+  const canvas = document.querySelector('#stage').getBoundingClientRect();
+  const worst = [];
+  for (const el of document.querySelectorAll('.reel-line, .reel-sub')) {
+    const r = el.getBoundingClientRect();
+    if (r.width === 0) continue;          // hidden subtitle on a caption with no sub line
+    worst.push({
+      tag: el.id,
+      insideL: r.left >= canvas.left - 0.5,
+      insideR: r.right <= canvas.right + 0.5,
+      over: Math.round(Math.max(canvas.left - r.left, r.right - canvas.right))
+    });
+  }
+  return { canvasW: Math.round(canvas.width), canvasH: Math.round(canvas.height), worst };
+});
+await p.screenshot({ path: join(here, 'dist/verify-caption.png') });
+const allInside = caption.worst.length > 0 && caption.worst.every((w) => w.insideL && w.insideR);
+const ratioOk = Math.abs(caption.canvasW / caption.canvasH - 9 / 16) < 0.02;
+
 const checks = [
   ['already built on arrival', out.progress === 1 && out.playing === false, JSON.stringify({ progress: out.progress, playing: out.playing })],
   ['build is offered, not forced', /build from scratch/i.test(out.playLabel), out.playLabel],
   ['loads in daylight', out.night === false, 'night=' + out.night],
   ['reel is all daylight', out.nightScenes === 0 && out.dayScenes === 10, out.dayScenes + ' day / ' + out.nightScenes + ' night'],
   ['no cage around a selection', afterSelect.helpers === 0 && afterSelect.dossierOpen, JSON.stringify(afterSelect)],
-  ['crowd built from limbs', out.crowdMeshes >= 8, out.crowdMeshes + ' instanced limb meshes']
+  ['crowd built from limbs', out.crowdMeshes >= 8, out.crowdMeshes + ' instanced limb meshes'],
+  ['captions stay inside the 9:16 frame', allInside && ratioOk, JSON.stringify(caption)]
 ];
 let bad = 0;
 for (const [label, ok, detail] of checks) {

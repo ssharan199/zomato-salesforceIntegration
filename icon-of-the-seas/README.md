@@ -146,8 +146,13 @@ console lists the start time of every cut. Change a `dur` and everything after
 it shifts; the pace slider stretches the whole sequence at once.
 
 Composition note — a 9:16 frame at this standoff is about 307 m wide and 546 m
-tall, so a 365 m ship does not fit across it. The two hero shots put her on the
+tall, so a 365 m ship does not fit across it. The closing shot puts her on the
 diagonal, where the frame is longest.
+
+Captions are sized and positioned against the rendered frame, not the browser
+window: `onResize` publishes the canvas rectangle as `--frame-w/h/x/y` and the
+overlays lay themselves out inside it. Using `vw` here would push text outside
+the 9:16 box that actually gets exported.
 
 `node reelshots.mjs [n...]` renders one frame from the middle of each cut as a
 contact sheet.

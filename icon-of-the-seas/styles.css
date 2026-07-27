@@ -17,6 +17,11 @@
   --mono: ui-monospace, "SFMono-Regular", "Roboto Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --rail: 344px;
+  /* the rendered frame — the whole window until reel framing narrows it */
+  --frame-w: 100vw;
+  --frame-h: 100vh;
+  --frame-x: 0px;
+  --frame-y: 0px;
 }
 
 @media (prefers-color-scheme: light) {
@@ -449,7 +454,11 @@ body.recording .rec-dot { animation: pulse 1.1s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .25; } }
 
 /* first-person */
-.walk-hud { position: fixed; inset: 0; z-index: 44; display: none; pointer-events: none; }
+.walk-hud {
+  position: fixed; z-index: 44; display: none; pointer-events: none;
+  left: var(--frame-x); top: var(--frame-y);
+  width: var(--frame-w); height: var(--frame-h);
+}
 body.walking .walk-hud { display: block; }
 body.walking .console { pointer-events: auto; }
 body.walking .specstrip, body.walking .labels, body.walking .readout { display: none; }
@@ -485,7 +494,11 @@ body.locked #stage { cursor: none; }
 }
 
 /* filming */
-.film-hud { position: fixed; inset: 0; z-index: 44; display: none; pointer-events: none; }
+.film-hud {
+  position: fixed; z-index: 44; display: none; pointer-events: none;
+  left: var(--frame-x); top: var(--frame-y);
+  width: var(--frame-w); height: var(--frame-h);
+}
 body.filming .film-hud { display: block; }
 body.filming .specstrip, body.filming .labels, body.filming .readout { display: none; }
 .film-bars::before, .film-bars::after {
@@ -551,7 +564,11 @@ body.reel .specstrip { display: none; }
 }
 .mark-row:hover { background: rgba(143, 211, 224, 0.07); border-left-color: var(--ice); }
 
-.reel-hud { position: fixed; inset: 0; z-index: 47; display: none; pointer-events: none; }
+.reel-hud {
+  position: fixed; z-index: 47; display: none; pointer-events: none;
+  left: var(--frame-x); top: var(--frame-y);
+  width: var(--frame-w); height: var(--frame-h);
+}
 body.reeling .reel-hud { display: block; }
 body.reeling .specstrip,
 body.reeling .labels,
@@ -559,7 +576,7 @@ body.reeling .readout { display: none; }
 
 /* Captions sit in the lower third, clear of a phone's UI furniture. */
 .reel-caption {
-  position: absolute; left: 6%; right: 6%; bottom: 16%;
+  position: absolute; left: 7%; right: 7%; bottom: 15%;
   display: grid; gap: 8px; justify-items: center; text-align: center;
   opacity: 0; transform: translateY(18px);
 }
@@ -572,20 +589,23 @@ body.reeling .readout { display: none; }
 
 .reel-line {
   font-family: var(--sans);
-  font-size: clamp(28px, 7.2vw, 62px);
-  font-weight: 700; letter-spacing: -0.03em; line-height: 1.02;
+  /* sized off the exported frame, and wrapped rather than allowed to run out */
+  font-size: clamp(20px, calc(var(--frame-w) * 0.077), 64px);
+  font-weight: 700; letter-spacing: -0.03em; line-height: 1.05;
   color: #fff; text-wrap: balance;
+  max-width: 100%; overflow-wrap: break-word; hyphens: none;
   text-shadow: 0 4px 26px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 .reel-sub {
   font-family: var(--mono);
-  font-size: clamp(10px, 2.4vw, 15px);
+  font-size: clamp(9px, calc(var(--frame-w) * 0.027), 16px);
+  max-width: 100%;
   letter-spacing: 0.16em; text-transform: uppercase;
   color: #ffd9b8;
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
 }
 .reel-scene {
-  position: absolute; top: 3%; left: 6%;
+  position: absolute; top: 3%; left: 7%;
   font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em;
   text-transform: uppercase; color: rgba(255, 255, 255, 0.55);
 }

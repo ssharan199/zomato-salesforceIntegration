@@ -79,14 +79,14 @@
   // line     the caption; sub is the small line under it
   var SCENES = [
     {
-      id: 'hook', dur: 3.4, env: 'day', fov: 30,
-      from: [520, 12, 90], to: [300, 30, 55],
-      lookFrom: [180, 30, 0], lookTo: [120, 45, 0],
+      id: 'hook', dur: 3.4, env: 'day', fov: 46,
+      from: [232, 5, 44], to: [96, 34, 62],
+      lookFrom: [150, 26, 6], lookTo: [-10, 52, 0],
       line: 'Ye koi sheher nahi', sub: ''
     },
     {
-      id: 'name', dur: 3.6, env: 'day', fov: 30,
-      from: [-880, 470, 760], to: [-660, 380, 600],
+      id: 'name', dur: 3.6, env: 'day', fov: 34,
+      from: [-500, 280, 430], to: [-395, 232, 348],
       lookFrom: [-30, 45, 0], lookTo: [-30, 45, 0],
       line: 'ICON OF THE SEAS', sub: 'Duniya ka sabse bada cruise ship'
     },
@@ -139,7 +139,7 @@
       id: 'price', dur: 5.0, env: 'day', fov: 30,
       from: [-620, 360, 560], to: [-980, 520, 830],
       lookFrom: [-30, 45, 0], lookTo: [-30, 45, 0],
-      line: '$2 billion', sub: 'Ek ship ki keemat'
+      line: '200 crore dollars', sub: 'Ek ship ki keemat'
     }
   ];
 
