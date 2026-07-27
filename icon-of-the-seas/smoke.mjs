@@ -36,6 +36,15 @@ async function readout() {
   }));
 }
 
+// The scene renders at ~1 fps under software raster, which is slower than
+// Playwright's "element stable for two frames" gate. These are behaviour
+// checks, not hit-testing checks, so dispatch the click directly.
+const click = (sel) => page.evaluate((s) => {
+  const el = document.querySelector(s);
+  if (!el) throw new Error('no element for ' + s);
+  el.click();
+}, sel);
+
 const setRange = (sel, value) => page.evaluate(([s, v]) => {
   const el = document.querySelector(s);
   el.value = String(v);
@@ -86,12 +95,12 @@ expect('dossier opens with specs', dossier.open && dossier.specs === 3, JSON.str
 await shot('05-dossier');
 
 // 6 — cutaway, night, heavy sea
-await page.click('#dossier-close');
-await page.click('[data-toggle="cutaway"]');
+await click('#dossier-close');
+await click('[data-toggle="cutaway"]');
 await page.waitForTimeout(500);
 await shot('06-cutaway');
-await page.click('[data-toggle="cutaway"]');
-await page.click('[data-toggle="night"]');   // brings the deck lights up with it
+await click('[data-toggle="cutaway"]');
+await click('[data-toggle="night"]');   // brings the deck lights up with it
 await setRange('#sea', 78);
 await page.waitForTimeout(900);
 await shot('07-night');
@@ -104,30 +113,30 @@ expect('night brings up the lights, sea state follows',
   night.night && night.lit && night.sea > 0.7, JSON.stringify(night));
 
 // 7 — sea trial makes way
-await page.click('[data-toggle="night"]');
+await click('[data-toggle="night"]');
 await setRange('#sea', 30);
-await page.click('#sail-btn');
+await click('#sail-btn');
 await page.waitForTimeout(300);
-// The loop clamps dt to 50 ms a frame, so under software raster real time buys
-// very little simulated time — hold the controls long enough to matter.
+// Advance the helm at a fixed step rather than in wall-clock: under software
+// raster the frame loop would buy only a fraction of a simulated second.
 await page.keyboard.down('KeyW');
-await page.waitForTimeout(7000);
 await page.keyboard.down('KeyD');
-await page.waitForTimeout(4000);
-const helm = await page.evaluate(() => ({
-  kn: parseFloat(document.querySelector('#kn').textContent),
-  hdg: document.querySelector('#hdg').textContent,
-  heading: window.IconApp.state.heading,
-  sailing: window.IconApp.state.sailing
-}));
+const helm = await page.evaluate(() => {
+  for (let i = 0; i < 600; i++) window.IconApp.stepSail(1 / 60);   // 10 s of helm
+  return {
+    kn: parseFloat(document.querySelector('#kn').textContent),
+    hdg: document.querySelector('#hdg').textContent,
+    heading: window.IconApp.state.heading,
+    sailing: window.IconApp.state.sailing
+  };
+});
 await page.keyboard.up('KeyW');
 await page.keyboard.up('KeyD');
-// Heading is checked in radians, not off the readout: a couple of frames a
-// second buys a fraction of a degree, which the display rounds away.
-expect('ship makes way under helm', helm.sailing && helm.kn > 1 && Math.abs(helm.heading) > 1e-3, JSON.stringify(helm));
+expect('ship makes way under helm',
+  helm.sailing && helm.kn > 10 && helm.hdg !== '000°', JSON.stringify(helm));
 await shot('08-sailing');
 
-await page.click('#helm-exit');
+await click('#helm-exit');
 await page.waitForTimeout(400);
 const back = await page.evaluate(() => ({
   sailing: window.IconApp.state.sailing,
@@ -148,7 +157,73 @@ expect('frame loop still turning', fps > 0.5, fps.toFixed(1) + ' fps under softw
   expect('script ran to completion', false, err.message.split('\n')[0]);
 }
 
-// 9 — the artifact build boots too. It has a different shape: scripts run
+// 9 — walk aboard: spawn in the promenade and actually move
+await click('#walk-btn');
+await page.waitForTimeout(600);
+const spawned = await page.evaluate(() => {
+  const w = window.IconApp.walker;
+  return { mode: window.IconApp.state.mode, x: w.pos.x, y: w.pos.y, ground: w.onGround };
+});
+await page.keyboard.down('KeyW');
+const walked = await page.evaluate(() => {
+  for (let i = 0; i < 300; i++) window.IconApp.stepWalk(1 / 60);   // 5 s of walking
+  const w = window.IconApp.walker;
+  return { x: w.pos.x, z: w.pos.z, y: w.pos.y, ground: w.onGround, venue: document.querySelector('#walk-venue').textContent };
+});
+await page.keyboard.up('KeyW');
+// Walks forward down the street, stays on the deck it started on.
+expect('walks the Royal Promenade',
+  spawned.mode === 'walk' && Math.abs(walked.z) > 8 && walked.ground && Math.abs(walked.y - spawned.y) < 0.5,
+  JSON.stringify({ spawned, walked }));
+await shot('09-promenade');
+
+// 10 — the pool deck, standing in the water
+await page.evaluate(() => {
+  const spawn = window.IconVenues.spawns.find((s) => s.id === 'chill');
+  window.IconApp.walker.spawn(spawn);
+  window.IconApp.walker.pos.set(-56, spawn.pos[1], 0);   // into the pool
+});
+await page.waitForTimeout(1200);
+const wading = await page.evaluate(() => ({
+  wading: window.IconApp.walker.wading,
+  eye: window.IconApp.walker.eyeY
+}));
+expect('wades into the pool', wading.wading > 0.1, JSON.stringify(wading));
+await shot('10-pool');
+
+// 11 — filming: shots advance and the camera actually moves
+await click('#walk-exit');
+await page.waitForTimeout(200);
+await click('#film-btn');
+await page.waitForTimeout(500);
+const film0 = await page.evaluate(() => ({
+  mode: window.IconApp.state.mode,
+  shot: document.querySelector('#film-shot').textContent,
+  cam: window.IconApp.cameraPos()
+}));
+const film1 = await page.evaluate(() => {
+  for (let i = 0; i < 180; i++) window.IconApp.stepFilm(1 / 60);   // 3 s of shot
+  return { cam: window.IconApp.cameraPos() };
+});
+const moved = Math.hypot(film1.cam[0] - film0.cam[0], film1.cam[1] - film0.cam[1], film1.cam[2] - film0.cam[2]);
+expect('camera flies the authored shots', film0.mode === 'film' && moved > 5,
+  JSON.stringify({ shot: film0.shot, moved: moved.toFixed(2) }));
+await shot('11-film');
+
+// 12 — vertical framing for a reel
+await page.evaluate(() => window.IconApp.setToggle('reel', true));
+await page.waitForTimeout(900);
+const reel = await page.evaluate(() => {
+  const c = document.querySelector('#stage');
+  return { w: c.clientWidth, h: c.clientHeight };
+});
+expect('reel framing is 9:16', Math.abs((reel.w / reel.h) - 9 / 16) < 0.02, JSON.stringify(reel));
+await shot('12-reel');
+await page.evaluate(() => window.IconApp.setToggle('reel', false));
+await page.evaluate(() => window.IconApp.setMode('orbit'));
+await page.waitForTimeout(500);
+
+// 13 — the artifact build boots too. It has a different shape: scripts run
 // before the markup they drive, so a regression here would not show up above.
 const artifact = await browser.newPage({ viewport: { width: 1024, height: 700 } });
 const artErrors = [];

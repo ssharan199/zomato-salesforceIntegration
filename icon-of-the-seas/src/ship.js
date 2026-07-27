@@ -218,10 +218,19 @@
     M.slideD = mat(0x7fd44f, { rough: 0.4 });
     M.rubber = mat(0x27303a, { rough: 0.9 });
     M.bronze = mat(0xb07a3a, { rough: 0.35, metal: 0.85 });
-    M.window = mat(0x1d2c3a, { rough: 0.15, metal: 0.4, emissive: 0xffcf87, ei: 0 });
-    M.windowLarge = mat(0x22323f, { rough: 0.12, metal: 0.35, emissive: 0xffd79a, ei: 0 });
+    M.window = mat(0x1d2c3a, { rough: 0.15, metal: 0.4, emissive: 0xffcf87, ei: 1 });
+    M.windowLarge = mat(0x22323f, { rough: 0.12, metal: 0.35, emissive: 0xffd79a, ei: 1 });
+    // Night livery. Icon reads as long lines of warm cabin light with cold
+    // neon washing the deck edges — these are what make the night shots.
+    M.neonCyan = mat(0x0e2a38, { rough: 0.4, emissive: 0x35e0ff, ei: 1.5 });
+    M.neonMagenta = mat(0x2a1024, { rough: 0.4, emissive: 0xff3fb0, ei: 1.5 });
+    M.neonBlue = mat(0x101c38, { rough: 0.4, emissive: 0x3f6bff, ei: 1.4 });
+    M.neonWarm = mat(0x2a2010, { rough: 0.4, emissive: 0xffb64a, ei: 1.3 });
     M.window.userData.window = true;
     M.windowLarge.userData.window = true;
+    [M.neonCyan, M.neonMagenta, M.neonBlue, M.neonWarm].forEach(function (m) {
+      m.userData.window = true;      // driven by the lights switch with the rest
+    });
     windowMats.length = 0;
   }
 
@@ -254,12 +263,49 @@
     return m;
   }
 
+  // A pool is a tiled shell plus a water surface, not a solid block of water.
+  // Built that way you can stand in it: the surface is a plane at chest height
+  // rather than a volume the camera ends up inside of.
+  function poolBox(w, h, d, x, y, z) {
+    var g = new THREE.Group();
+    var shell = new THREE.Mesh(
+      new THREE.BoxGeometry(w, h, d),
+      mat(0x8fd0e4, { rough: 0.22, side: THREE.BackSide })     // seen from within
+    );
+    shell.position.set(x, y - 0.05, z);
+    shell.receiveShadow = true;
+    g.add(shell);
+
+    var plane = new THREE.PlaneGeometry(w, d);
+    plane.rotateX(-Math.PI / 2);                                // local xz, for edge foam
+    var surface = new THREE.Mesh(plane, global.IconWater.pool(new THREE.Vector3(w / 2, 0, d / 2)));
+    surface.position.set(x, y + h / 2, z);
+    g.add(surface);
+    return g;
+  }
+
+  function poolTub(r, h, x, y, z) {
+    var g = new THREE.Group();
+    var shell = new THREE.Mesh(
+      new THREE.CylinderGeometry(r, r, h, 22),
+      mat(0x8fd0e4, { rough: 0.22, side: THREE.BackSide })
+    );
+    shell.position.set(x, y - 0.05, z);
+    g.add(shell);
+    var disc = new THREE.CircleGeometry(r, 22);
+    disc.rotateX(-Math.PI / 2);
+    var surface = new THREE.Mesh(disc, global.IconWater.pool(new THREE.Vector3(r * 1.4, 0, r * 1.4)));
+    surface.position.set(x, y + h / 2, z);
+    g.add(surface);
+    return g;
+  }
+
   // A run of lit windows down one side of the ship.
   function windowStrip(x0, x1, y, z, height, material) {
     var g = new THREE.Group();
-    var step = 4.0;
+    var step = 2.6;                       // cabin pitch, near enough
     for (var x = x0; x <= x1; x += step) {
-      g.add(box(step * 0.66, height, 0.5, material, x, y, z));
+      g.add(box(step * 0.74, height, 0.5, material, x, y, z));
     }
     return g;
   }
@@ -270,6 +316,9 @@
     g.add(box(x1 - x0, 2.35, 1.0, M.superstructure, (x0 + x1) / 2, y, z));
     g.add(windowStrip(x0 + 2, x1 - 2, y - 0.15, z - side * 0.55, 1.6, M.window));
     g.add(box(x1 - x0, 0.25, 1.5, M.steel, (x0 + x1) / 2, y - 1.15, z + side * 0.3));
+    // the light line under each balcony rail, which is what makes the side of
+    // the ship read as stacked ribbons after dark
+    g.add(box(x1 - x0, 0.16, 0.24, M.neonWarm, (x0 + x1) / 2, y - 1.35, z + side * 0.9));
     return g;
   }
 
@@ -573,14 +622,19 @@
       build: function () {
         var g = new THREE.Group();
         // superstructure core, decks 5-7
+        // Hollow: the street runs through the middle of this block, so the
+        // structure sits outboard of it and the decks stop either side.
         var stbd = new THREE.Group(); stbd.name = 'stbd';
-        stbd.add(box(300, 11, 22, M.superstructure, -10, 36.5, 11));
-        stbd.add(windowStrip(-152, 138, 36, 22.4, 6, M.windowLarge));
+        stbd.add(box(300, 11, 7, M.superstructure, -10, 36.5, 16.5));
+        stbd.add(windowStrip(-152, 138, 36, 20.2, 6, M.windowLarge));
         g.add(stbd);
-        g.add(box(300, 11, 22, M.superstructure, -10, 36.5, -11));
-        g.add(windowStrip(-152, 138, 36, -22.4, 6, M.windowLarge));
-        // interior deck slabs, revealed by the cutaway
-        for (var d = 0; d < 3; d++) g.add(box(296, 0.5, 42, M.darkSteel, -10, 32.4 + d * 3.6, 0));
+        g.add(box(300, 11, 7, M.superstructure, -10, 36.5, -16.5));
+        g.add(windowStrip(-152, 138, 36, -20.2, 6, M.windowLarge));
+        // interior deck slabs port and starboard, revealed by the cutaway
+        for (var d = 0; d < 3; d++) {
+          stbd.add(box(296, 0.5, 7, M.darkSteel, -10, 32.4 + d * 3.6, 16.5));
+          g.add(box(296, 0.5, 7, M.darkSteel, -10, 32.4 + d * 3.6, -16.5));
+        }
         // The Pearl
         var pearl = new THREE.Mesh(new THREE.IcosahedronGeometry(5.4, 2), mat(0xdfe6ea, { rough: 0.25, metal: 0.55, flat: true }));
         pearl.position.set(6, 37, 0);
@@ -659,7 +713,7 @@
       build: function () {
         var g = new THREE.Group();
         g.add(box(52, 1, 34, M.teak, 96, 43.5, 0));
-        var pool = box(16, 1.6, 12, M.pool, 88, 44.2, 0);
+        var pool = poolBox(16, 1.6, 12, 88, 44.2, 0);
         g.add(pool);
         g.add(box(20, 0.5, 16, M.white, 106, 44.2, 0));
         // carousel
@@ -695,7 +749,7 @@
         g.add(box(14, 0.4, 12, M.teak, 106, 80.7, -9));
         g.add(slide([[110, 83, -5], [114, 80, -3], [112, 76, 1], [108, 74.6, 3]], 0.7, M.slideC));
         g.add(box(32, 0.6, 26, M.teak, 84, 74.3, 4));
-        g.add(box(12, 1.2, 8, M.pool, 76, 74.9, 4));
+        g.add(poolBox(12, 1.2, 8, 76, 74.9, 4));
         g.add(railing(68, 100, 74.5, 13));
         return g;
       }
@@ -735,19 +789,22 @@
         var y = TOP_DECK;
         g.add(box(80, 0.8, 40, M.teak, -34, y + 0.4, 0));
         [[-56, 0, 18, 14], [-30, 12, 16, 12], [-8, -12, 16, 12]].forEach(function (p) {
-          g.add(box(p[2], 1.6, p[3], M.pool, p[0], y + 1.2, p[1]));
+          g.add(poolBox(p[2], 1.6, p[3], p[0], y + 1.2, p[1]));
           g.add(box(p[2] + 2, 0.5, p[3] + 2, M.white, p[0], y + 0.7, p[1]));
         });
         // whirlpools cantilevered outboard
         [-1, 1].forEach(function (side) {
           [-48, -20].forEach(function (x) {
-            g.add(cyl(3.4, 3.4, 1.4, M.pool, x, y + 1.4, side * 24));
+            g.add(poolTub(3.4, 1.4, x, y + 1.4, side * 24));
             g.add(cyl(3.8, 3.8, 1.6, M.white, x, y + 0.6, side * 24));
             g.add(box(6, 0.6, 5, M.steel, x, y - 0.4, side * 22));
           });
         });
         g.add(railing(-74, 6, y, 20));
         g.add(railing(-74, 6, y, -20));
+        [-1, 1].forEach(function (side) {
+          g.add(box(80, 0.3, 0.34, side > 0 ? M.neonCyan : M.neonMagenta, -34, y + 0.1, side * 20));
+        });
         return g;
       }
     },
@@ -759,7 +816,7 @@
       build: function () {
         var g = new THREE.Group();
         var y = TOP_DECK;
-        g.add(box(26, 1.8, 20, M.pool, -76, y + 1.2, 0));
+        g.add(poolBox(26, 1.8, 20, -76, y + 1.2, 0));
         g.add(box(28, 0.6, 22, M.white, -76, y + 0.4, 0));
         g.add(box(12, 2.4, 4, M.teak, -76, y + 2.4, 0));
         g.add(box(13, 0.3, 5, M.white, -76, y + 3.7, 0));
@@ -850,7 +907,7 @@
         var g = new THREE.Group();
         var y = 62;
         g.add(box(30, 0.8, 46, M.teak, -158, y, 0));
-        g.add(box(18, 1.8, 16, M.pool, -160, y + 1.2, 0));
+        g.add(poolBox(18, 1.8, 16, -160, y + 1.2, 0));
         g.add(box(20, 0.4, 18, M.white, -160, y + 0.3, 0));
         for (var d = 0; d < 3; d++) {
           g.add(box(24 - d * 4, 0.5, 44 - d * 8, M.teak, -156 - d * 2, y + 4 + d * 3.3, 0));
@@ -863,6 +920,31 @@
           s.rotation.z = 0.4;
           g.add(s);
         });
+
+        // The arch over the stern — the single most recognisable thing about
+        // this ship's profile, and the frame every aft photograph is taken in.
+        var arch = new THREE.Group();
+        arch.position.set(-150, y - 16, 0);
+        var ring = new THREE.Mesh(new THREE.TorusGeometry(26, 1.5, 12, 48, Math.PI), M.white);
+        ring.rotation.y = Math.PI / 2;
+        ring.castShadow = true;
+        arch.add(ring);
+        var inner = new THREE.Mesh(new THREE.TorusGeometry(23.4, 0.7, 8, 48, Math.PI), M.neonBlue);
+        inner.rotation.y = Math.PI / 2;
+        arch.add(inner);
+        // legs down onto the terraces
+        [-1, 1].forEach(function (side) {
+          arch.add(box(5, 9, 3.4, M.white, 0, -4, side * 25.6));
+        });
+        g.add(arch);
+        // deck-edge neon around the terraces
+        for (var d2 = 0; d2 < 3; d2++) {
+          var wz = (44 - d2 * 8) / 2;
+          [-1, 1].forEach(function (side) {
+            g.add(box(24 - d2 * 4, 0.28, 0.3, d2 % 2 ? M.neonMagenta : M.neonCyan,
+              -156 - d2 * 2, y + 3.7 + d2 * 3.3, side * wz));
+          });
+        }
         return g;
       }
     },
@@ -875,12 +957,20 @@
         var g = new THREE.Group();
         var y = TOP_DECK, R = 25;
         g.add(box(74, 1, 52, M.deck, 54, y + 0.5, 0));
+        // The dome sits on an oval collar that overhangs the shell on both
+        // sides — that lip is what gives the bow its flying-saucer look.
+        var collar = cyl(37, 37, 1.6, M.white, 54, y + 1.6, 0, 44);
+        collar.scale.set(1, 1, 0.86);
+        g.add(collar);
+        var collarLight = cyl(37.6, 37.6, 0.45, M.neonBlue, 54, y + 0.75, 0, 44);
+        collarLight.scale.set(1, 1, 0.86);
+        g.add(collarLight);
 
         // Built round at unit radius inside a squashed group, so every rib is
         // deformed by the same transform instead of each one on its own axis.
         var shell = new THREE.Group();
         shell.position.set(54, y + 1, 0);
-        shell.scale.set(1.28, 0.56, 1);
+        shell.scale.set(1.32, 0.86, 1.06);   // taller crown, closer to the real one
         var glass = new THREE.Mesh(new THREE.SphereGeometry(R, 44, 22, 0, Math.PI * 2, 0, Math.PI / 2), M.domeGlass);
         shell.add(glass);
         for (var i = 0; i < 16; i++) {
@@ -899,7 +989,7 @@
         g.add(shell);
 
         // AquaTheater stage, and the waterfall that falls into it
-        g.add(box(22, 2.6, 22, M.pool, 44, y + 2, 0));
+        g.add(poolBox(22, 2.6, 22, 44, y + 2, 0));
         g.add(box(24, 0.6, 24, M.white, 44, y + 0.9, 0));
         var fall = new THREE.Mesh(new THREE.PlaneGeometry(15, 11), glassMat(0xcfeaf5, 0.5));
         fall.position.set(65, y + 7, 0);
@@ -918,13 +1008,20 @@
       build: function () {
         var g = new THREE.Group();
         var y = TOP_DECK;
-        // exhaust casing
-        g.add(box(18, 12, 22, M.rcBlue, -92, y + 6, 0));
-        g.add(box(20, 2.4, 24, M.white, -92, y + 13, 0));
-        [-6, 6].forEach(function (z) { g.add(cyl(2.4, 2.4, 4.5, M.darkSteel, -92, y + 15.5, z, 14)); });
-        var crest = cyl(4.4, 4.4, 0.6, M.gold, -83.2, y + 7, 0, 20);
-        crest.rotation.z = Math.PI / 2;
-        g.add(crest);
+        // Twin funnels, side by side — the pair reads from a mile off and is
+        // one of the things that says Icon rather than any other big ship.
+        [-8.5, 8.5].forEach(function (fz) {
+          var casing = cyl(5.2, 6.0, 13, M.rcBlue, -92, y + 6.5, fz, 20);
+          g.add(casing);
+          g.add(cyl(5.6, 5.6, 1.6, M.white, -92, y + 13.6, fz, 20));
+          g.add(cyl(4.4, 4.4, 1.2, M.darkSteel, -92, y + 14.8, fz, 18));
+          // the underlit collar that makes them glow at night
+          g.add(cyl(6.2, 6.2, 0.7, M.neonCyan, -92, y + 1.2, fz, 20));
+          var crest = cyl(3.2, 3.2, 0.5, M.gold, -86.6, y + 7.5, fz, 20);
+          crest.rotation.z = Math.PI / 2;
+          g.add(crest);
+        });
+        g.add(box(26, 1.2, 26, M.deck, -92, y + 0.6, 0));
         // bridge, full width with wings out to the shell
         g.add(box(16, 5, 46, M.white, 118, 56, 0));
         g.add(windowStrip(112, 126, 56.5, 23.2, 3, M.windowLarge));
@@ -962,6 +1059,13 @@
       var group = def.build();
       group.name = def.id;
 
+      // Human-scale fit-out rides with the block that carries it, so it appears
+      // exactly when that block is erected.
+      if (global.IconVenues && global.IconVenues.has(def.id)) {
+        var fitOut = global.IconVenues.attach(def.id);
+        if (fitOut) { fitOut.name = def.id + '-fitout'; group.add(fitOut); }
+      }
+
       // Each block owns its materials, so fading one in never touches another.
       var cache = new Map();
       var owned = [];
@@ -976,7 +1080,12 @@
           clone.userData = Object.assign({}, o.material.userData);
           cache.set(o.material, clone);
           owned.push(clone);
-          if (clone.userData.window) windowMats.push(clone);
+          if (clone.userData.window) {
+            // Remember what the material was authored at, so the lights switch
+            // scales it instead of flattening every fitting to one value.
+            clone.userData.authoredEI = clone.emissiveIntensity;
+            windowMats.push(clone);
+          }
         }
         o.material = clone;
       });

@@ -78,7 +78,7 @@
       <button class="switch" data-toggle="cutaway" role="switch" aria-checked="false" type="button">
         <span>Cutaway — open the starboard shell</span><i></i>
       </button>
-      <button class="switch" data-toggle="deckLights" role="switch" aria-checked="false" type="button">
+      <button class="switch" data-toggle="deckLights" role="switch" aria-checked="true" type="button">
         <span>Deck &amp; cabin lights</span><i></i>
       </button>
       <button class="switch" data-toggle="night" role="switch" aria-checked="false" type="button">
@@ -97,7 +97,43 @@
     </section>
 
     <section class="sect">
-      <h2 class="sect__title"><span class="sect__num">V</span> Block dossiers <em class="sect__count">24</em></h2>
+      <h2 class="sect__title"><span class="sect__num">V</span> Walk aboard</h2>
+      <p class="sect__note">Stand on her decks. <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk, mouse looks, <kbd>Shift</kbd> runs, <kbd>Space</kbd> jumps. Wade into the pools.</p>
+      <button class="btn btn--wide btn--primary" id="walk-btn" type="button">Walk aboard</button>
+      <div class="venue-list" id="venue-list"></div>
+    </section>
+
+    <section class="sect">
+      <h2 class="sect__title"><span class="sect__num">VI</span> Filming</h2>
+      <p class="sect__note">Nine authored camera moves, cut for a reel. Record writes a .webm straight from the canvas.</p>
+      <div class="btn-row">
+        <button class="btn btn--primary" id="film-btn" type="button">Roll camera</button>
+        <button class="btn" id="film-next" type="button">Next shot</button>
+      </div>
+      <button class="switch" data-toggle="reel" role="switch" aria-checked="false" type="button">
+        <span>Vertical 9:16 framing</span><i></i>
+      </button>
+      <button class="switch" data-toggle="hideUI" role="switch" aria-checked="false" type="button">
+        <span>Hide the console <em class="switch__key">H</em></span><i></i>
+      </button>
+      <button class="btn btn--wide btn--rec" id="rec-btn" type="button">
+        <span class="rec-dot"></span><span id="rec-label">Record</span>
+      </button>
+    </section>
+
+    <section class="sect">
+      <h2 class="sect__title"><span class="sect__num">VII</span> Image</h2>
+      <button class="switch" data-toggle="fx" role="switch" aria-checked="true" type="button">
+        <span>Cinematic pipeline — bloom, tone map, grade</span><i></i>
+      </button>
+      <label class="field" for="bloom">
+        <span class="field__label">Bloom <em id="bloom-val">0.42</em></span>
+        <input id="bloom" class="slider" type="range" min="0" max="120" value="42" step="1" />
+      </label>
+    </section>
+
+    <section class="sect">
+      <h2 class="sect__title"><span class="sect__num">VIII</span> Block dossiers <em class="sect__count">24</em></h2>
       <div class="block-list" id="block-list"></div>
     </section>
 
@@ -125,6 +161,26 @@
   <div><span>Service speed</span><b>22 kn</b></div>
 </footer>
 
+<div class="walk-hud" id="walk-hud">
+  <div class="crosshair"></div>
+  <div class="walk-bar">
+    <span class="walk-bar__where" id="walk-venue">Royal Promenade</span>
+    <span class="walk-bar__hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · drag to look · <kbd>Shift</kbd> run · <kbd>Esc</kbd> out</span>
+    <button class="walk-bar__exit" id="walk-exit" type="button">Leave</button>
+  </div>
+</div>
+
+<div class="film-hud" id="film-hud">
+  <div class="film-bars"></div>
+  <div class="film-slate">
+    <span class="film-slate__label">Shot</span>
+    <b id="film-shot">Bow rise</b>
+    <span class="film-bar" id="film-bar"></span>
+  </div>
+</div>
+
+<div class="rec-badge" id="rec-badge"><span class="rec-dot"></span>REC <b id="rec-time">0.0s</b></div>
+
 <div class="helm" id="helm">
   <div class="helm__data">
     <div><span>Speed</span><b id="kn">0.0</b><i>kn</i></div>
@@ -141,7 +197,11 @@
 </div>
 
 <script src="vendor/three.min.js"></script>
+<script src="src/venues.js"></script>
+<script src="src/water.js"></script>
 <script src="src/ship.js"></script>
+<script src="src/fx.js"></script>
+<script src="src/walk.js"></script>
 <script src="src/app.js"></script>
 </body>
 </html>

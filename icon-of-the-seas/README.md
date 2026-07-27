@@ -2,7 +2,8 @@
 
 An interactive 3D design-and-assembly game for Royal Caribbean's *Icon of the Seas*:
 build her keel-up in 24 blocks, pull the whole ship apart, cut away the starboard
-shell to look inside, then take her out on a sea trial.
+shell to look inside, **walk her decks in first person**, then take her out on a
+sea trial — and film the whole thing for a reel.
 
 Written from scratch with [three.js](https://threejs.org) — no engine, no model
 files. The hull is lofted at runtime from 74 station curves; everything above it is
@@ -59,18 +60,58 @@ anything approximate is marked ≈.
 ```
 index.html        markup and the console
 styles.css        design tokens, light and dark
+src/venues.js     human-scale fit-out, walkable floors, colliders, the crowd
+src/water.js      pool and sea optics — shared wave bands, Fresnel, foam
 src/ship.js       hull loft, the 24 blocks, dossier copy
+src/fx.js         HDR target, bloom pyramid, tone map, grade
+src/walk.js       first-person controller, camera director, webm recorder
 src/app.js        renderer, sea, camera rig, build timeline, sea trial
 vendor/three.min.js
 build.mjs         inlines the above into dist/
-smoke.mjs         headless checks — drives the console and fails on any runtime error
+smoke.mjs         headless checks — drives everything, fails on any runtime error
+views.mjs         review tool — first-person and exterior frames from each venue
 ```
+
+## Walking aboard
+
+Nine places you can stand: Royal Promenade, Central Park, Chill Island, Thrill
+Island, the AquaDome, The Hideaway, Crown's Edge, the promenade deck and
+Surfside. <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walks, the mouse
+looks (pointer lock where the browser allows it, drag-to-look otherwise),
+<kbd>Shift</kbd> runs, <kbd>Space</kbd> jumps. Walk into a pool and you wade.
+Walk off Crown's Edge and you go over the side.
+
+The player lives in the ship's own coordinate frame, so the horizon tilts when
+she rolls — you are standing on her, not beside her.
+
+## Filming
+
+Nine authored camera moves (<kbd>F</kbd>), a vertical 9:16 framing toggle
+(<kbd>B</kbd>), a hide-the-console key (<kbd>H</kbd>), and a recorder
+(<kbd>K</kbd>) that writes a .webm straight off the canvas.
+
+## The image pipeline
+
+`src/fx.js`: scene to an HDR multisampled target, soft-knee bright pass, a
+four-level downsample/tent-upsample bloom pyramid added in HDR, then exposure,
+ACES tone mapping, grade, vignette and grain, encoded to sRGB. The renderer's
+own tone mapping is off so this stays the single owner. Exposure is authored per
+lighting mode rather than metered — a reel wants a stable image, and an
+auto-exposure loop pumps as the camera pans.
+
+Water is documented in `src/water.js`: six analytic wave bands shared between
+the sea and the pools, derivative-attenuated so fine bands fade out rather than
+alias, side-aware Fresnel, Beer-Lambert absorption over an estimated path, and
+crest-linked foam. Screen-space refraction is *not* implemented — there is no
+scene-colour texture bound, so the body term is absorption over an authored
+bottom colour, and the light on the water at night is an authored pool of
+illumination rather than a reflection.
 
 ## Tests
 
 ```
 npm install        # playwright, for the headless run only
-npm test           # 8 checks: build scrub, tags, dossiers, cutaway, night, sea trial
+npm test           # 14 checks: build, dossiers, cutaway, night, sea trial, walking, filming
 npm run test:shots # same, plus screenshots into dist/
 ```
 

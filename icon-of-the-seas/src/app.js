@@ -20,7 +20,7 @@
     explode: 0,
     labels: true,
     cutaway: false,
-    deckLights: false,
+    deckLights: true,
     night: false,
     seaState: 0.3,
     selected: null,
@@ -29,13 +29,22 @@
     throttle: 0,
     steer: 0,
     heading: 0,
-    speedMS: 0
+    speedMS: 0,
+    mode: 'orbit',        // orbit | walk | film
+    hideUI: false,
+    reel: false,          // 9:16 framing for a vertical cut
+    fx: true,
+    bloom: 0.42
   };
 
   var renderer, scene, camera, ship, controls, sun, hemi, ocean, oceanGeo, oceanBase;
   var pmrem, envTex, envRT;
   var deckLightRig = [];
   var allMats = [];
+  var waterMats = [];
+  var seaUniforms = null;
+  var fx, walker, director, recorder, crowdGroup;
+  var BASE_FOV = 42;
   var labelEls = [];
   var selectionBox, selectionHelper;
   var wake, wakeData;
@@ -147,6 +156,28 @@
     if (storm) seaCol.lerp(new THREE.Color(0x3c4a52), 0.5);
     ocean.material.color.copy(seaCol);
     ocean.material.roughness = storm ? 0.32 : 0.12;
+
+    // Water reflects the same sky the scene renders, so it can never disagree
+    // with the horizon behind it.
+    var sunDir = new THREE.Vector3().copy(sun.position).normalize();
+    if (seaUniforms) {
+      seaUniforms.uSky.value = envTex;
+      seaUniforms.uSunDir.value.copy(sunDir);
+      seaUniforms.uSunColour.value.copy(sun.color).multiplyScalar(state.night ? 0.25 : 1);
+      seaUniforms.uAmp.value = 0.3 + state.seaState * 0.9;
+      seaUniforms.uFoam.value = (0.12 + state.seaState * 0.75) * (state.night ? 0.5 : 1);
+      seaUniforms.uSeaTint.value.copy(seaCol);
+    }
+    waterMats.forEach(function (m) {
+      m.uniforms.uSky.value = envTex;
+      m.uniforms.uSunDir.value.copy(sunDir);
+      m.uniforms.uSunColour.value.copy(sun.color).multiplyScalar(state.night ? 0.3 : 1);
+    });
+
+    if (fx) {
+      fx.set('exposure', state.night ? 1.5 : (storm ? 0.95 : 1.0));
+      fx.set('saturation', storm ? 0.92 : 1.08);
+    }
   }
 
   /* ------------------------------------------------------------------- sea */
@@ -182,6 +213,9 @@
     oceanGeo.rotateX(-Math.PI / 2);
     oceanBase = oceanGeo.attributes.position.array.slice();
     var m = new THREE.MeshStandardMaterial({ color: 0x1c5f80, roughness: 0.12, metalness: 0.0 });
+    // Patched rather than replaced, so the sea keeps shadows, fog and lighting
+    // while gaining the fine wave bands, sky reflection and glint.
+    seaUniforms = global.IconWater.patchSea(m);
     ocean = new THREE.Mesh(oceanGeo, m);
     ocean.receiveShadow = true;
     scene.add(ocean);
@@ -365,9 +399,11 @@
     renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(global.devicePixelRatio || 1, 2));
     renderer.setSize(innerWidth, innerHeight, false);
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    // The post pipeline owns tone mapping; the renderer must not also apply it.
+    renderer.toneMapping = THREE.NoToneMapping;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.autoClear = false;
 
     scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0xcfe2ea, 0.00016);
@@ -400,6 +436,11 @@
     ship = global.IconShip.build();
     BLOCK_COUNT = ship.parts.length;
     ship.parts.forEach(function (p) { allMats = allMats.concat(p.materials); });
+    waterMats = allMats.filter(function (m) { return m.userData && m.userData.water === 'pool'; });
+
+    // guests, walking their own circuits inside each neighbourhood
+    crowdGroup = global.IconVenues.buildCrowd();
+    ship.root.add(crowdGroup);
 
     shipTrim = new THREE.Group();
     shipTrim.add(ship.root);
@@ -425,6 +466,13 @@
     scene.add(selectionHelper);
 
     controls = new OrbitRig(camera, canvas);
+
+    fx = new global.IconFX.Pipeline(renderer);
+    walker = new global.IconWalk.Walker(global.IconVenues);
+    director = new global.IconWalk.Director();
+    recorder = new global.IconWalk.Recorder(canvas);
+    bindWalkInput(canvas);
+
     refreshEnvironment();
 
     buildUI();
@@ -453,12 +501,32 @@
   }
 
   function onResize() {
-    camera.aspect = innerWidth / innerHeight;
+    var w = innerWidth, h = innerHeight;
+    if (state.reel) {
+      // 9:16 for a vertical cut — the canvas itself is the frame that records.
+      h = Math.min(innerHeight, innerWidth * 16 / 9);
+      w = h * 9 / 16;
+      var el = renderer.domElement;
+      el.style.width = w + 'px';
+      el.style.height = h + 'px';
+      el.style.left = ((innerWidth - w) / 2) + 'px';
+      el.style.top = ((innerHeight - h) / 2) + 'px';
+      el.style.right = 'auto';
+      el.style.bottom = 'auto';
+    } else {
+      var e2 = renderer.domElement;
+      e2.style.width = '100%'; e2.style.height = '100%';
+      e2.style.left = '0'; e2.style.top = '0';
+      e2.style.right = '0'; e2.style.bottom = '0';
+    }
+    camera.aspect = w / h;
     // Bias the frustum so the ship centres in the water, not behind the console.
-    var rail = innerWidth > 900 ? 344 : 0;
-    camera.setViewOffset(innerWidth, innerHeight, -rail / 2, 0, innerWidth, innerHeight);
+    var rail = (state.mode === 'orbit' && !state.hideUI && !state.reel && innerWidth > 900) ? 344 : 0;
+    if (rail) camera.setViewOffset(w, h, -rail / 2, 0, w, h);
+    else camera.clearViewOffset();
     camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight, false);
+    renderer.setSize(w, h, false);
+    if (fx) fx.setSize(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());
   }
 
   /* -------------------------------------------------------------- timeline */
@@ -660,23 +728,159 @@
     }
   }
 
+  /* -------------------------------------------------------- walk & film mode */
+
+  var pointerLocked = false, dragLook = false;
+
+  function bindWalkInput(canvas) {
+    document.addEventListener('pointerlockchange', function () {
+      pointerLocked = document.pointerLockElement === canvas;
+      document.body.classList.toggle('locked', pointerLocked);
+    });
+
+    // Pointer lock is not always granted inside an embedded frame, so
+    // drag-to-look is always available as well.
+    global.addEventListener('mousemove', function (e) {
+      if (state.mode !== 'walk') return;
+      if (pointerLocked || dragLook) {
+        walker.look.x += e.movementX || 0;
+        walker.look.y += e.movementY || 0;
+      }
+    });
+    canvas.addEventListener('pointerdown', function () {
+      if (state.mode !== 'walk') return;
+      dragLook = true;
+      if (!pointerLocked && canvas.requestPointerLock) {
+        try { canvas.requestPointerLock(); } catch (err) { /* drag-look covers it */ }
+      }
+    });
+    global.addEventListener('pointerup', function () { dragLook = false; });
+
+    // touch: left half drives, right half looks
+    var sticks = {};
+    canvas.addEventListener('touchstart', function (e) {
+      if (state.mode !== 'walk') return;
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        var t = e.changedTouches[i];
+        sticks[t.identifier] = { x: t.clientX, y: t.clientY, drive: t.clientX < innerWidth / 2 };
+      }
+    }, { passive: true });
+    canvas.addEventListener('touchmove', function (e) {
+      if (state.mode !== 'walk') return;
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        var t = e.changedTouches[i], s = sticks[t.identifier];
+        if (!s) continue;
+        var dx = t.clientX - s.x, dy = t.clientY - s.y;
+        if (s.drive) {
+          walker.move.set(clamp(dx / 60, -1, 1), clamp(-dy / 60, -1, 1));
+        } else {
+          walker.look.x += dx * 0.6; walker.look.y += dy * 0.6;
+          s.x = t.clientX; s.y = t.clientY;
+        }
+      }
+    }, { passive: true });
+    var endTouch = function (e) {
+      for (var i = 0; i < e.changedTouches.length; i++) {
+        var s = sticks[e.changedTouches[i].identifier];
+        if (s && s.drive) walker.move.set(0, 0);
+        delete sticks[e.changedTouches[i].identifier];
+      }
+    };
+    canvas.addEventListener('touchend', endTouch, { passive: true });
+    canvas.addEventListener('touchcancel', endTouch, { passive: true });
+  }
+
+  function setMode(mode, spawn) {
+    var previous = state.mode;
+    state.mode = mode;
+    document.body.classList.toggle('walking', mode === 'walk');
+    document.body.classList.toggle('filming', mode === 'film');
+    controls.enabled = mode === 'orbit' && !state.sailing;
+
+    if (mode !== 'orbit') {
+      // Anything you walk into or film has to exist first.
+      if (state.progress < 1) setProgress(1);
+      state.playing = false; syncPlay();
+      setExplode(0);
+      selectPart(null);
+    }
+    if (mode === 'walk') {
+      walker.spawn(spawn || global.IconVenues.spawns[0]);
+      camera.fov = 62;                       // wider inside — rooms read better
+      camera.updateProjectionMatrix();
+      $('#walk-venue').textContent = walker.venue;
+    } else if (mode === 'film') {
+      director.start(0);
+    } else {
+      camera.fov = BASE_FOV;
+      camera.updateProjectionMatrix();
+      director.stop();
+      if (document.exitPointerLock && pointerLocked) document.exitPointerLock();
+    }
+    if (previous !== mode) onResize();
+    syncModeButtons();
+  }
+
+  function syncModeButtons() {
+    $('#walk-btn').textContent = state.mode === 'walk' ? 'Back to the outside' : 'Walk aboard';
+    $('#film-btn').textContent = state.mode === 'film' ? 'Stop the camera' : 'Roll camera';
+  }
+
+  function toggleRecord() {
+    if (!recorder.supported) {
+      $('#rec-label').textContent = 'Recording is not available in this browser';
+      return;
+    }
+    if (recorder.recorder) {
+      recorder.stop();
+      document.body.classList.remove('recording');
+      $('#rec-label').textContent = 'Saved icon-of-the-seas.webm';
+    } else if (recorder.start(60)) {
+      document.body.classList.add('recording');
+      $('#rec-label').textContent = 'Recording';
+    }
+  }
+
   /* ------------------------------------------------------------- sea trial */
 
   var keys = {};
   function onKey(e) {
     keys[e.code] = true;
+    if (walker) walker.keys[e.code] = true;
     if (e.target && /input|select|textarea/i.test(e.target.tagName)) return;
+
+    if (state.mode === 'walk') {
+      if (e.code === 'Space') e.preventDefault();               // jump, not play
+    } else if (e.code === 'Space') {
+      e.preventDefault(); togglePlay();
+    }
+
     switch (e.code) {
-      case 'Space': e.preventDefault(); togglePlay(); break;
-      case 'KeyE': setExplode(state.explode > 0.5 ? 0 : 1); break;
-      case 'KeyL': setToggle('labels', !state.labels); break;
+      case 'KeyV': setMode(state.mode === 'walk' ? 'orbit' : 'walk', currentSpawn); break;
+      case 'KeyF': setMode(state.mode === 'film' ? 'orbit' : 'film'); break;
+      case 'KeyH': setToggle('hideUI', !state.hideUI); break;
+      case 'KeyB': setToggle('reel', !state.reel); break;
+      case 'KeyK': toggleRecord(); break;
       case 'KeyN': setToggle('night', !state.night); break;
-      case 'KeyC': setToggle('cutaway', !state.cutaway); break;
-      case 'KeyR': setProgress(0); state.playing = false; syncPlay(); break;
-      case 'Escape': if (state.sailing) setSail(false); else selectPart(null); break;
+      case 'Escape':
+        if (state.mode !== 'orbit') setMode('orbit');
+        else if (state.sailing) setSail(false);
+        else selectPart(null);
+        break;
+    }
+    if (state.mode !== 'walk') {
+      switch (e.code) {
+        case 'KeyE': setExplode(state.explode > 0.5 ? 0 : 1); break;
+        case 'KeyL': setToggle('labels', !state.labels); break;
+        case 'KeyC': setToggle('cutaway', !state.cutaway); break;
+        case 'KeyR': setProgress(0); state.playing = false; syncPlay(); break;
+      }
     }
   }
-  function onKeyUp(e) { keys[e.code] = false; }
+  function onKeyUp(e) {
+    keys[e.code] = false;
+    if (walker) walker.keys[e.code] = false;
+  }
 
   function setSail(on) {
     state.sailing = on;
@@ -698,7 +902,7 @@
     }
   }
 
-  function updateSail(dt) {
+  function updateSail(dt, keepCamera) {
     var acc = 0;
     if (keys.KeyW || keys.ArrowUp) acc += 1;
     if (keys.KeyS || keys.ArrowDown) acc -= 1;
@@ -734,6 +938,11 @@
       }
     }
 
+    $('#kn').textContent = (sp * 1.94384).toFixed(1);
+    $('#hdg').textContent = String(Math.round(((-state.heading * 180 / Math.PI) % 360 + 360) % 360)).padStart(3, '0') + '°';
+    $('#pod').textContent = (state.steer * 35).toFixed(0) + '°';
+    if (keepCamera) return;     // walking or filming — the camera is not the helm's
+
     // chase camera, hung off the port quarter
     var back = new THREE.Vector3(-1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), state.heading);
     var want = new THREE.Vector3().copy(shipYaw.position)
@@ -743,17 +952,13 @@
     var look = new THREE.Vector3().copy(shipYaw.position).add(new THREE.Vector3(0, 62, 0));
     controls.target.lerp(look, 1 - Math.pow(0.02, dt));
     camera.lookAt(controls.target);
-
-    $('#kn').textContent = (sp * 1.94384).toFixed(1);
-    $('#hdg').textContent = String(Math.round(((-state.heading * 180 / Math.PI) % 360 + 360) % 360)).padStart(3, '0') + '°';
-    $('#pod').textContent = (state.steer * 35).toFixed(0) + '°';
   }
 
   var touchSteer = 0, touchThrottle = 0;
 
   /* -------------------------------------------------------------------- UI */
 
-  var ladderEls = [], listEls = [], toggleEls = {};
+  var ladderEls = [], listEls = [], toggleEls = {}, currentSpawn = null;
 
   function syncToggle(name, on) {
     if (toggleEls[name]) toggleEls[name].setAttribute('aria-checked', on ? 'true' : 'false');
@@ -776,14 +981,21 @@
     }
     if (name === 'isolate') applyProgress();
     if (name === 'labels') updateLabels();
+    if (name === 'hideUI') document.body.classList.toggle('bare', on);
+    if (name === 'reel') { document.body.classList.toggle('reel', on); onResize(); }
+    if (name === 'fx') fx.enabled = on;
   }
 
   function setDeckLights(on) {
     var v = on ? 1 : 0;
-    ship.windowMats.forEach(function (m) { m.emissiveIntensity = v * (state.night ? 2.6 : 0.5); });
+    var gain = v * (state.night ? 1.7 : 0.8);
+    ship.windowMats.forEach(function (m) {
+      var authored = m.userData.authoredEI === undefined ? 1 : m.userData.authoredEI;
+      m.emissiveIntensity = authored * gain;
+    });
     // Physical units: these are metre-scale distances, so keep the candela low
     // or the floodlights wash straight across the sea.
-    deckLightRig.forEach(function (l) { l.intensity = v * (state.night ? 5200 : 1400); });
+    deckLightRig.forEach(function (l) { l.intensity = v * (state.night ? 900 : 220); });
   }
 
   function setProgress(p) {
@@ -853,6 +1065,46 @@
       state.seaState = Number(e.target.value) / 100;
       $('#sea-val').textContent = seaLabel(state.seaState);
       refreshEnvironment();
+    });
+
+    // walk aboard — one button per place worth standing in
+    var venueList = $('#venue-list');
+    global.IconVenues.spawns.forEach(function (spawn) {
+      var el = document.createElement('button');
+      el.className = 'venue-row';
+      el.type = 'button';
+      el.innerHTML = '<span class="venue-name">' + spawn.label + '</span>' +
+        '<span class="venue-sub">' + spawn.sub + '</span>';
+      el.addEventListener('click', function () {
+        currentSpawn = spawn;
+        if (state.mode === 'walk') {
+          walker.spawn(spawn);
+          $('#walk-venue').textContent = spawn.label;
+        } else {
+          setMode('walk', spawn);
+        }
+        Array.prototype.forEach.call(venueList.children, function (c) { c.classList.remove('is-active'); });
+        el.classList.add('is-active');
+      });
+      venueList.appendChild(el);
+    });
+
+    $('#walk-btn').addEventListener('click', function () {
+      setMode(state.mode === 'walk' ? 'orbit' : 'walk', currentSpawn);
+    });
+    $('#walk-exit').addEventListener('click', function () { setMode('orbit'); });
+    $('#film-btn').addEventListener('click', function () {
+      setMode(state.mode === 'film' ? 'orbit' : 'film');
+    });
+    $('#film-next').addEventListener('click', function () {
+      director.index = (director.index + 1) % director.shots.length;
+      director.t = 0;
+    });
+    $('#rec-btn').addEventListener('click', toggleRecord);
+    $('#bloom').addEventListener('input', function (e) {
+      state.bloom = Number(e.target.value) / 100;
+      fx.set('strength', state.bloom);
+      $('#bloom-val').textContent = state.bloom.toFixed(2);
     });
 
     $('#play').addEventListener('click', togglePlay);
@@ -967,8 +1219,35 @@
       f.material.opacity = 0.35 + Math.sin(t * 6) * 0.08;
     });
 
-    if (state.sailing) updateSail(dt);
-    else controls.update(dt);
+    // water shares one clock with the swell displacement
+    if (seaUniforms) seaUniforms.uTime.value = t;
+    for (var wi = 0; wi < waterMats.length; wi++) waterMats[wi].uniforms.uTime.value = t;
+
+    var peopleAboard = state.progress > 0.995;
+    crowdGroup.visible = peopleAboard;
+    if (peopleAboard && !reduceMotion) global.IconVenues.updateCrowd(t);
+
+    shipYaw.updateMatrixWorld(true);
+
+    if (state.mode === 'walk') {
+      walker.update(dt, null);
+      if (walker.overboard) {
+        // over the side — put them back on the deck they left from
+        walker.spawn(currentSpawn || global.IconVenues.spawns[0]);
+        $('#walk-venue').textContent = 'Man overboard — back aboard';
+      }
+      walker.applyTo(camera, shipTrim.matrixWorld);
+      if (state.sailing) updateSail(dt, true);
+    } else if (state.mode === 'film') {
+      director.update(dt, camera, shipTrim.matrixWorld);
+      $('#film-shot').textContent = director.shot().label;
+      $('#film-bar').style.setProperty('--k', (director.t / director.shot().dur * 100).toFixed(1) + '%');
+      if (state.sailing) updateSail(dt, true);
+    } else if (state.sailing) {
+      updateSail(dt);
+    } else {
+      controls.update(dt);
+    }
 
     // ambient spray at the bow in a seaway, even at rest
     _acc += dt;
@@ -979,12 +1258,25 @@
     }
     updateWake(dt);
 
+    // the light the ship throws onto the water, only after dark
+    if (seaUniforms) {
+      seaUniforms.uGlowCentre.value.copy(shipYaw.position);
+      seaUniforms.uGlowDir.value.set(Math.cos(state.heading), -Math.sin(state.heading));
+      var wantGlow = state.night && state.deckLights && state.progress > 0.9 ? 0.5 : 0;
+      seaUniforms.uGlowStrength.value += (wantGlow - seaUniforms.uGlowStrength.value) * Math.min(1, dt * 3);
+    }
+
     sun.target.position.copy(shipYaw.position);
     sun.position.set(shipYaw.position.x - 380, 420, shipYaw.position.z + 260);
 
     updateLabels();
     if (state.selected) refreshSelectionBox();
-    renderer.render(scene, camera);
+
+    if (recorder && recorder.recorder) {
+      $('#rec-time').textContent = recorder.elapsed().toFixed(1) + 's';
+    }
+
+    fx.render(scene, camera, t);
   }
 
   /* ------------------------------------------------------------------ boot */
@@ -1007,5 +1299,34 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 
-  global.IconApp = { state: state };
+  // Handles for the headless checks — and for anyone poking at it in a console.
+  global.IconApp = {
+    state: state,
+    setMode: function (m, s) { setMode(m, s); },
+    setToggle: setToggle,
+    setProgress: setProgress,
+    get walker() { return walker; },
+    get director() { return director; },
+    get fx() { return fx; },
+    cameraPos: function () { return camera.position.toArray(); },
+    // Fixed-step hooks so the headless checks can advance the simulation
+    // without waiting on the frame loop, which crawls under software raster.
+    stepSail: function (dt) { updateSail(dt, true); },
+    // Park the orbit rig at an exact eye and target — used by the view tool to
+    // shoot the same exterior framings every run.
+    freeCam: function (eye, look, fov) {
+      var e = new THREE.Vector3().fromArray(eye);
+      var t = new THREE.Vector3().fromArray(look);
+      var d = new THREE.Vector3().subVectors(e, t);
+      controls.goalTarget.copy(t); controls.target.copy(t);
+      controls.goalRadius = controls.radius = d.length();
+      controls.goalTheta = controls.theta = Math.atan2(d.x, d.z);
+      controls.goalPhi = controls.phi = Math.acos(clamp(d.y / d.length(), -1, 1));
+      camera.fov = fov || BASE_FOV;
+      camera.updateProjectionMatrix();
+      controls.update(1);
+    },
+    stepWalk: function (dt) { walker.update(dt, null); },
+    stepFilm: function (dt) { director.update(dt, camera, shipTrim.matrixWorld); }
+  };
 })(window);
