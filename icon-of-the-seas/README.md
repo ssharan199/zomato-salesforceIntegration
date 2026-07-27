@@ -1,4 +1,15 @@
-# Icon of the Seas — Assembly Console
+# Icon of the Seas
+
+Interactive 3D *Icon of the Seas* — Royal Caribbean's 2024 megaship — built
+from scratch with three.js. No engine, no model files: the hull is lofted at
+runtime from 74 station curves and everything above it is written as code.
+
+The finished vertical reel is in [`reel/`](reel/).
+
+**Picking this up in a new session? Read [`HANDOFF.md`](HANDOFF.md) first** — it
+has the whole state of the project, what is still open, and how to render.
+
+## Assembly Console
 
 An interactive 3D design-and-assembly game for Royal Caribbean's *Icon of the Seas*:
 build her keel-up in 24 blocks, pull the whole ship apart, cut away the starboard
@@ -176,8 +187,14 @@ node render.mjs --mux-only            # assemble frames already on disk
 Sharding across browsers turned out not to help here — the software rasteriser
 already uses every core, so three workers deliver the same 0.38 fps as one.
 
-Timing comes from the voice track in `audio/`. Each line is given time in
-proportion to its syllable count, then every boundary is snapped to the nearest
-pause found by `silencedetect` when one falls within 0.75 s. The scene
-durations in `src/reel.js` sum to the recording's length exactly, so picture and
-sound end together.
+Timing comes from the voice track in `audio/`, via `align.mjs`. No speech recogniser is
+reachable from a sandboxed container, so `align.mjs` does the next best thing:
+it finds every run of speech with `silencedetect`, then splits those runs into
+one group per script line — choosing the split that best matches each line's
+syllable count, subject to a floor on scene length. Every cut is therefore
+forced into a real pause and can never land mid-word.
+
+That fixes cuts landing mid-word. It cannot verify that the right *scene* sits
+on the right *line*, which needs someone who can hear the recording. The
+durations in `src/reel.js` are plain numbers — replace them with measured ones
+and re-render.
