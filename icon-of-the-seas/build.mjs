@@ -12,7 +12,7 @@ const read = (p) => readFileSync(join(here, p), 'utf8');
 const html = read('index.html');
 const css = read('styles.css');
 const three = read('vendor/three.min.js');
-const sources = ['src/venues.js', 'src/water.js', 'src/ship.js', 'src/fx.js', 'src/walk.js', 'src/app.js'];
+const sources = ['src/venues.js', 'src/water.js', 'src/ship.js', 'src/fx.js', 'src/walk.js', 'src/reel.js', 'src/app.js'];
 const code = sources.map(read);
 
 // Guard against a source file accidentally closing the inline script early.

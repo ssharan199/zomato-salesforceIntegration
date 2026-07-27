@@ -43,7 +43,7 @@
   var allMats = [];
   var waterMats = [];
   var seaUniforms = null;
-  var fx, walker, director, recorder, crowdGroup;
+  var fx, walker, director, recorder, crowdGroup, reel, titanic;
   var BASE_FOV = 42;
   var labelEls = [];
   var selectionBox, selectionHelper;
@@ -175,7 +175,7 @@
     });
 
     if (fx) {
-      fx.set('exposure', state.night ? 1.5 : (storm ? 0.95 : 1.0));
+      fx.set('exposure', state.night ? 1.5 : (storm ? 0.88 : 0.92));
       fx.set('saturation', storm ? 0.92 : 1.08);
     }
   }
@@ -468,6 +468,13 @@
     controls = new OrbitRig(camera, canvas);
 
     fx = new global.IconFX.Pipeline(renderer);
+    titanic = global.IconReel.buildTitanic();
+    titanic.position.set(0, 0, -150);          // alongside, for the scale shot
+    ship.root.add(titanic);
+    reel = new global.IconReel.Reel({
+      onScene: function (scene) { enterScene(scene); },
+      onEnd: function () { finishReel(); }
+    });
     walker = new global.IconWalk.Walker(global.IconVenues);
     director = new global.IconWalk.Director();
     recorder = new global.IconWalk.Recorder(canvas);
@@ -795,6 +802,8 @@
     state.mode = mode;
     document.body.classList.toggle('walking', mode === 'walk');
     document.body.classList.toggle('filming', mode === 'film');
+    document.body.classList.toggle('reeling', mode === 'reel');
+    if (mode !== 'reel' && reel) { reel.stop(); titanic.visible = false; }
     controls.enabled = mode === 'orbit' && !state.sailing;
 
     if (mode !== 'orbit') {
@@ -811,6 +820,9 @@
       $('#walk-venue').textContent = walker.venue;
     } else if (mode === 'film') {
       director.start(0);
+    } else if (mode === 'reel') {
+      camera.fov = 34;
+      camera.updateProjectionMatrix();
     } else {
       camera.fov = BASE_FOV;
       camera.updateProjectionMatrix();
@@ -819,6 +831,46 @@
     }
     if (previous !== mode) onResize();
     syncModeButtons();
+  }
+
+  // Each cut owns its lighting and its caption. Switching the sky costs one
+  // PMREM rebuild, which is why it happens on the cut, where it cannot be seen.
+  function enterScene(scene) {
+    var wantNight = scene.env === 'night';
+    if (wantNight !== state.night) {
+      state.night = wantNight;
+      syncToggle('night', wantNight);
+      if (wantNight && !state.deckLights) { state.deckLights = true; syncToggle('deckLights', true); }
+      refreshEnvironment();
+      setDeckLights(state.deckLights);
+    }
+    titanic.visible = !!scene.titanic;
+    var cap = $('#reel-caption');
+    cap.classList.remove('is-in', 'is-out');
+    $('#reel-line').textContent = scene.line;
+    $('#reel-sub').textContent = scene.sub || '';
+    $('#reel-sub').style.display = scene.sub ? 'block' : 'none';
+    void cap.offsetWidth;                       // restart the entry animation
+    cap.classList.add('is-in');
+    $('#reel-scene').textContent = scene.id;
+  }
+
+  function finishReel() {
+    if (recorder && recorder.recorder) toggleRecord();
+    reel.stop();
+    setMode('orbit');
+    $('#reel-label').textContent = 'Play the cut';
+  }
+
+  function startReel(record) {
+    setMode('reel');
+    if (record && recorder.supported && !recorder.recorder) {
+      if (!state.reel) setToggle('reel', true);
+      if (!state.hideUI) setToggle('hideUI', true);
+      toggleRecord();
+    }
+    reel.start(0);
+    $('#reel-label').textContent = 'Stop';
   }
 
   function syncModeButtons() {
@@ -861,6 +913,7 @@
       case 'KeyH': setToggle('hideUI', !state.hideUI); break;
       case 'KeyB': setToggle('reel', !state.reel); break;
       case 'KeyK': toggleRecord(); break;
+      case 'KeyP': if (state.mode === 'reel' && reel.running) finishReel(); else startReel(false); break;
       case 'KeyN': setToggle('night', !state.night); break;
       case 'Escape':
         if (state.mode !== 'orbit') setMode('orbit');
@@ -1101,6 +1154,19 @@
       director.t = 0;
     });
     $('#rec-btn').addEventListener('click', toggleRecord);
+    $('#reel-play').addEventListener('click', function () {
+      if (state.mode === 'reel' && reel.running) { finishReel(); return; }
+      startReel(false);
+    });
+    $('#reel-record').addEventListener('click', function () {
+      if (state.mode === 'reel' && reel.running) { finishReel(); return; }
+      startReel(true);
+    });
+    $('#reel-speed').addEventListener('input', function (e) {
+      reel.speed = Number(e.target.value) / 100;
+      renderMarks();
+    });
+    renderMarks();
     $('#bloom').addEventListener('input', function (e) {
       state.bloom = Number(e.target.value) / 100;
       fx.set('strength', state.bloom);
@@ -1139,6 +1205,27 @@
     bindHelm('#helm-stbd', function (v) { touchSteer = v; });
 
     syncPlay();
+  }
+
+  // The scene list doubles as the sheet you line a voice track up against.
+  function renderMarks() {
+    var host = $('#reel-marks');
+    if (!host) return;
+    host.innerHTML = '';
+    reel.marks().forEach(function (m, i) {
+      var row = document.createElement('button');
+      row.className = 'mark-row';
+      row.type = 'button';
+      row.innerHTML = '<span class="mark-at">' + m.at.toFixed(1) + '</span>' +
+        '<span class="mark-id">' + reel.scenes[i].line + '</span>' +
+        '<span class="mark-dur">' + m.dur.toFixed(1) + 's</span>';
+      row.addEventListener('click', function () {
+        setMode('reel');
+        reel.start(i);
+      });
+      host.appendChild(row);
+    });
+    $('#reel-total').textContent = reel.total().toFixed(1) + 's';
   }
 
   function bindHelm(sel, fn) {
@@ -1238,6 +1325,12 @@
       }
       walker.applyTo(camera, shipTrim.matrixWorld);
       if (state.sailing) updateSail(dt, true);
+    } else if (state.mode === 'reel') {
+      reel.update(dt, camera, shipTrim.matrixWorld);
+      var ph = reel.phase();
+      $('#reel-caption').classList.toggle('is-out', ph.left < 0.45);
+      $('#reel-progress').style.setProperty('--k', (ph.k * 100).toFixed(1) + '%');
+      if (state.sailing) updateSail(dt, true);
     } else if (state.mode === 'film') {
       director.update(dt, camera, shipTrim.matrixWorld);
       $('#film-shot').textContent = director.shot().label;
@@ -1327,6 +1420,9 @@
       controls.update(1);
     },
     stepWalk: function (dt) { walker.update(dt, null); },
-    stepFilm: function (dt) { director.update(dt, camera, shipTrim.matrixWorld); }
+    stepFilm: function (dt) { director.update(dt, camera, shipTrim.matrixWorld); },
+    stepReel: function (dt) { reel.update(dt, camera, shipTrim.matrixWorld); },
+    startReel: startReel,
+    get reel() { return reel; }
   };
 })(window);

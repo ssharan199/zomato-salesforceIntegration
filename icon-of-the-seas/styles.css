@@ -534,6 +534,71 @@ body.reel { background: #000; }
 body.reel #stage { position: fixed; box-shadow: 0 0 60px rgba(0, 0, 0, 0.6); }
 body.reel .specstrip { display: none; }
 
+/* ------------------------------------------------------------------ reel */
+
+.mark-list { display: grid; gap: 1px; }
+.mark-row {
+  display: grid; grid-template-columns: 42px 1fr auto; gap: 8px; align-items: baseline;
+  width: 100%; padding: 6px 8px; background: none; border: 0;
+  border-left: 2px solid transparent; text-align: left;
+}
+.mark-at {
+  font-size: 10px; color: var(--primer); font-variant-numeric: tabular-nums;
+}
+.mark-id { font-family: var(--sans); font-size: 12px; color: var(--text); }
+.mark-dur {
+  font-size: 9.5px; color: var(--text-faint); font-variant-numeric: tabular-nums;
+}
+.mark-row:hover { background: rgba(143, 211, 224, 0.07); border-left-color: var(--ice); }
+
+.reel-hud { position: fixed; inset: 0; z-index: 47; display: none; pointer-events: none; }
+body.reeling .reel-hud { display: block; }
+body.reeling .specstrip,
+body.reeling .labels,
+body.reeling .readout { display: none; }
+
+/* Captions sit in the lower third, clear of a phone's UI furniture. */
+.reel-caption {
+  position: absolute; left: 6%; right: 6%; bottom: 16%;
+  display: grid; gap: 8px; justify-items: center; text-align: center;
+  opacity: 0; transform: translateY(18px);
+}
+.reel-caption.is-in {
+  animation: capIn .42s cubic-bezier(.16, .84, .32, 1) forwards;
+}
+.reel-caption.is-out { animation: capOut .35s ease forwards; }
+@keyframes capIn { to { opacity: 1; transform: none; } }
+@keyframes capOut { to { opacity: 0; transform: translateY(-14px); } }
+
+.reel-line {
+  font-family: var(--sans);
+  font-size: clamp(28px, 7.2vw, 62px);
+  font-weight: 700; letter-spacing: -0.03em; line-height: 1.02;
+  color: #fff; text-wrap: balance;
+  text-shadow: 0 4px 26px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+.reel-sub {
+  font-family: var(--mono);
+  font-size: clamp(10px, 2.4vw, 15px);
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: #ffd9b8;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
+}
+.reel-scene {
+  position: absolute; top: 3%; left: 6%;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: rgba(255, 255, 255, 0.55);
+}
+.reel-progress {
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: rgba(255, 255, 255, 0.14);
+}
+.reel-progress::after {
+  content: ""; display: block; height: 100%; width: var(--k, 0%);
+  background: var(--primer);
+}
+body.bare .reel-scene { display: none; }
+
 /* ------------------------------------------------------------ responsive */
 
 .panel-toggle {

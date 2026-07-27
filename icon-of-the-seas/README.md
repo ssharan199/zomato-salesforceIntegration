@@ -125,3 +125,21 @@ deck heights and neighbourhood positions are set to match photographs and the
 published general arrangement, but this is a game, not a lines plan. Where a
 published figure is uncertain — pod output, tank capacity, boat count — the
 dossier describes the system instead of inventing a number.
+
+## The reel
+
+`src/reel.js` holds a ten-cut vertical sequence timed to a Hinglish voice-over,
+with the Titanic built alongside for the scale shot. Press <kbd>P</kbd>, or use
+the console: **Play the cut** previews it, **Record** sets 9:16, hides the
+console and writes the .webm.
+
+Retiming to a voice track: each scene's `dur` is its seconds on screen, and the
+console lists the start time of every cut. Change a `dur` and everything after
+it shifts; the pace slider stretches the whole sequence at once.
+
+Composition note — a 9:16 frame at this standoff is about 307 m wide and 546 m
+tall, so a 365 m ship does not fit across it. The two hero shots put her on the
+diagonal, where the frame is longest.
+
+`node reelshots.mjs [n...]` renders one frame from the middle of each cut as a
+contact sheet.

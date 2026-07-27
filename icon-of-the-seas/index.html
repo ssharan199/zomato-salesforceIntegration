@@ -104,7 +104,21 @@
     </section>
 
     <section class="sect">
-      <h2 class="sect__title"><span class="sect__num">VI</span> Filming</h2>
+      <h2 class="sect__title"><span class="sect__num">VI</span> The reel <em class="sect__count" id="reel-total">39.2s</em></h2>
+      <p class="sect__note">Ten cuts, 9:16, timed to the Hinglish voice-over. Click any line to jump to that cut.</p>
+      <div class="btn-row">
+        <button class="btn btn--primary" id="reel-play" type="button"><span id="reel-label">Play the cut</span></button>
+        <button class="btn btn--rec" id="reel-record" type="button"><span class="rec-dot"></span>Record</button>
+      </div>
+      <label class="field" for="reel-speed">
+        <span class="field__label">Pace — stretch to fit your voice track</span>
+        <input id="reel-speed" class="slider" type="range" min="60" max="160" value="100" step="1" />
+      </label>
+      <div class="mark-list" id="reel-marks"></div>
+    </section>
+
+    <section class="sect">
+      <h2 class="sect__title"><span class="sect__num">VII</span> Free camera</h2>
       <p class="sect__note">Nine authored camera moves, cut for a reel. Record writes a .webm straight from the canvas.</p>
       <div class="btn-row">
         <button class="btn btn--primary" id="film-btn" type="button">Roll camera</button>
@@ -122,7 +136,7 @@
     </section>
 
     <section class="sect">
-      <h2 class="sect__title"><span class="sect__num">VII</span> Image</h2>
+      <h2 class="sect__title"><span class="sect__num">VIII</span> Image</h2>
       <button class="switch" data-toggle="fx" role="switch" aria-checked="true" type="button">
         <span>Cinematic pipeline — bloom, tone map, grade</span><i></i>
       </button>
@@ -133,7 +147,7 @@
     </section>
 
     <section class="sect">
-      <h2 class="sect__title"><span class="sect__num">VIII</span> Block dossiers <em class="sect__count">24</em></h2>
+      <h2 class="sect__title"><span class="sect__num">IX</span> Block dossiers <em class="sect__count">24</em></h2>
       <div class="block-list" id="block-list"></div>
     </section>
 
@@ -179,6 +193,15 @@
   </div>
 </div>
 
+<div class="reel-hud" id="reel-hud">
+  <div class="reel-caption" id="reel-caption">
+    <b class="reel-line" id="reel-line">Ye koi sheher nahi</b>
+    <span class="reel-sub" id="reel-sub"></span>
+  </div>
+  <span class="reel-scene" id="reel-scene">hook</span>
+  <span class="reel-progress" id="reel-progress"></span>
+</div>
+
 <div class="rec-badge" id="rec-badge"><span class="rec-dot"></span>REC <b id="rec-time">0.0s</b></div>
 
 <div class="helm" id="helm">
@@ -202,6 +225,7 @@
 <script src="src/ship.js"></script>
 <script src="src/fx.js"></script>
 <script src="src/walk.js"></script>
+<script src="src/reel.js"></script>
 <script src="src/app.js"></script>
 </body>
 </html>
